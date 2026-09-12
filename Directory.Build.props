@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    Propriedades comuns a todos os projetos da solução. Centralizar aqui evita que um projeto
+    novo nasça divergente do resto — o modo de falha mais comum em solução multi-projeto.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      Warning vira erro porque, num kit de referência, warning tolerado é warning copiado:
+      quem usa o kit como base herda o aviso junto com a estrutura.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Faz as regras do .editorconfig valerem no build, não só na IDE de quem tem o plugin. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>

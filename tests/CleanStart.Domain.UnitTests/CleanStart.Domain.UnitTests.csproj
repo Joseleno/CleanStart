@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Testa regra de domínio: entidade, value object, invariante. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanStart.Domain\CleanStart.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+</Project>

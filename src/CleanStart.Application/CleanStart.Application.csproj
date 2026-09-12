@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Application → Domain apenas. Persistência entra por interface, nunca por EF Core. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CleanStart.Domain\CleanStart.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

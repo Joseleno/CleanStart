@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Repositório, interceptor e migration contra PostgreSQL e Redis reais, em container. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanStart.Infrastructure\CleanStart.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!--
+    Testcontainers e não o provider InMemory do EF Core: o InMemory não tem constraint, não tem
+    transação e não fala SQL — passa em teste que o Postgres reprovaria. Precisa de Docker rodando.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+</Project>

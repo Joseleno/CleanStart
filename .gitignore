@@ -1,0 +1,167 @@
+## CleanStart — .gitignore
+## Base: github/gitignore (VisualStudio/Dotnet), enxugado para o que este repositório
+## realmente produz. Comentado de propósito: é repositório de referência.
+
+# ─────────────────────────────────────────────
+# Saídas de build
+# ─────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Ll]og/
+[Ll]ogs/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+artifacts/
+publish/
+*.pdb
+*.dSYM/
+
+# Sem `*.dll` e `*.exe` aqui, de propósito: `[Bb]in/` e `[Oo]bj/` já cobrem toda a
+# saída de build do .NET. Ignorar a extensão solta apagaria também qualquer
+# dependência nativa versionada em `lib/` ou `tools/` — e em silêncio.
+
+# Log binário do MSBuild (gerado ao diagnosticar build; chega a dezenas de MB)
+*.binlog
+
+# Arquivos gerados por source generator (Mediator, Mapperly) quando
+# EmitCompilerGeneratedFiles estiver habilitado para inspeção local
+[Gg]enerated[ ]Files/
+generated/
+
+# ─────────────────────────────────────────────
+# Visual Studio / Rider / VS Code
+# ─────────────────────────────────────────────
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.userprefs
+*.rsuser
+*.sln.docstates
+*.sln.iml
+*.DotSettings.user
+
+# VS Code: versiona só o que é útil ao time (tasks e launch de exemplo)
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# ─────────────────────────────────────────────
+# Segredos e configuração local  ← a seção que importa
+# ─────────────────────────────────────────────
+# Nunca commitar credencial. Em desenvolvimento use User Secrets
+# (dotnet user-secrets), em produção use variável de ambiente.
+secrets.json
+*.secrets.json
+appsettings.*.local.json
+appsettings.Production.json
+appsettings.Staging.json
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+*.pem
+!tests/**/testing-only*.pem
+
+# `launchSettings.json` É versionado, de propósito: num kit de referência, quem clona
+# precisa rodar de primeira, com portas e perfis já configurados. Em troca, ele nunca
+# recebe segredo — só URLs e `ASPNETCORE_ENVIRONMENT`. Credencial vai em User Secrets.
+
+# docker-compose de sobrescrita local (cada dev tem o seu)
+docker-compose.override.yml
+!docker-compose.override.example.yml
+
+# ─────────────────────────────────────────────
+# Testes e cobertura
+# ─────────────────────────────────────────────
+[Tt]est[Rr]esult*/
+TestResults/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+.coverlet/
+BenchmarkDotNet.Artifacts/
+
+# Saída de teste de snapshot que falhou (o `.verified.` é versionado; o `.received.` não)
+*.received.*
+
+# Resultados de carga (k6) — o script é versionado, a saída não
+tests/load/results/
+*.k6.json
+summary.html
+
+# ─────────────────────────────────────────────
+# NuGet
+# ─────────────────────────────────────────────
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+# packages.lock.json NÃO é ignorado: build reprodutível depende dele
+
+# ─────────────────────────────────────────────
+# Banco de dados e ferramentas locais
+# ─────────────────────────────────────────────
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.db-shm
+*.db-wal
+# ATENÇÃO: migrations do EF Core são código-fonte e DEVEM ser versionadas.
+# Não adicione src/CleanStart.Infrastructure/Persistence/Migrations/ aqui.
+
+# ─────────────────────────────────────────────
+# Front-end / ferramentas auxiliares (geração de imagens, docs)
+# ─────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+.playwright/
+playwright-report/
+
+# ─────────────────────────────────────────────
+# Sistema operacional
+# ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+*.swp
+
+# ─────────────────────────────────────────────
+# Ferramentas de IA / sessão local
+# ─────────────────────────────────────────────
+.claude/settings.local.json
+.claude/sessions/
+.claude/*.local.md
+
+# ─────────────────────────────────────────────
+# Documentos de trabalho interno
+# ─────────────────────────────────────────────
+# Ficam no disco e continuam funcionando normalmente — só não são publicados.
+# Quem clona o kit quer o código e o README, não o plano de execução do autor
+# nem o log de decisões.
+#
+# ATENÇÃO: HANDOFF.md é o ponto único de memória do projeto e, a partir daqui,
+# existe SÓ nesta máquina. Não há backup no git. Se a pasta se perder, o
+# histórico de decisões vai junto.
+CLAUDE.md
+HANDOFF.md
+IMPLEMENTACAO.md
