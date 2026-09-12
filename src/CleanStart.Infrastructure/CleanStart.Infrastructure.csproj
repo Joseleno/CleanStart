@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Infrastructure → Domain + Application (só implementa as interfaces que a Application declara). -->
+  <ItemGroup>
+    <ProjectReference Include="..\CleanStart.Domain\CleanStart.Domain.csproj" />
+    <ProjectReference Include="..\CleanStart.Application\CleanStart.Application.csproj" />
+  </ItemGroup>
+
+</Project>

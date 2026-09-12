@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Sem PropertyGroup: TargetFramework, Nullable e ImplicitUsings vêm do Directory.Build.props.
+    Sem ProjectReference: o Domain não depende de nada — é o centro da arquitetura, e isso é
+    travado por teste em CleanStart.ArchitectureTests (T0.3).
+  -->
+
+</Project>

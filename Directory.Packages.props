@@ -1,0 +1,22 @@
+<Project>
+
+  <!--
+    Central Package Management: a versão de cada pacote é declarada uma vez aqui, e os .csproj
+    referenciam só o nome. Evita o cenário em que dois projetos da mesma solução resolvem
+    versões diferentes do mesmo pacote.
+
+    Ainda vazio de PackageVersion de propósito — os pacotes entram a partir da T0.2.
+
+    Quando entrarem source generators e analyzers (Mediator.SourceGenerator, Riok.Mapperly),
+    eles vão com PrivateAssets="all" no PackageReference: sem isso vazam como dependência
+    transitiva para quem consumir os assemblies.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>
