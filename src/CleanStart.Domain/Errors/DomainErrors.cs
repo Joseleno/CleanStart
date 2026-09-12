@@ -1,3 +1,5 @@
+using CleanStart.Domain.Orders;
+
 namespace CleanStart.Domain.Errors;
 
 /// <summary>
@@ -56,6 +58,34 @@ public static class DomainErrors
         public static Error Invalido(string valor) => Error.Validation(
             "Email.Invalido",
             $"'{valor}' não é um endereço de e-mail válido.");
+    }
+
+    /// <summary>Erros do agregado <c>Order</c>.</summary>
+    public static class Order
+    {
+        /// <summary>Tentativa de criar pedido sem nenhum item.</summary>
+        public static Error SemItens() => Error.Validation(
+            "Order.SemItens",
+            "Um pedido precisa de ao menos um item.");
+
+        /// <summary>Quantidade de item menor ou igual a zero.</summary>
+        public static Error QuantidadeInvalida(int quantidade) => Error.Validation(
+            "Order.QuantidadeInvalida",
+            $"A quantidade do item deve ser maior que zero, mas foi {quantidade}.");
+
+        /// <summary>Transição de estado que a regra não permite.</summary>
+        /// <remarks>
+        /// <see cref="ErrorType.Conflict"/> porque o pedido existe e a operação é bem formada — o que
+        /// impede é o estado atual. A Api traduz em 409.
+        /// </remarks>
+        public static Error TransicaoInvalida(OrderStatus de, OrderStatus para) => Error.Conflict(
+            "Order.TransicaoInvalida",
+            $"Não é possível mudar um pedido de '{de}' para '{para}'.");
+
+        /// <summary>Itens do pedido em moedas diferentes entre si.</summary>
+        public static Error ItensEmMoedasDiferentes() => Error.Validation(
+            "Order.ItensEmMoedasDiferentes",
+            "Todos os itens de um pedido devem usar a mesma moeda.");
     }
 
     /// <summary>Erros do value object <c>Document</c>.</summary>
