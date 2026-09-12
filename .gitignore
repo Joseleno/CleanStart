@@ -148,8 +148,20 @@ Desktop.ini
 # ─────────────────────────────────────────────
 # Ferramentas de IA / sessão local
 # ─────────────────────────────────────────────
-# CLAUDE.md e HANDOFF.md são versionados (são contexto do projeto).
-# O que é sessão local, não.
 .claude/settings.local.json
 .claude/sessions/
 .claude/*.local.md
+
+# ─────────────────────────────────────────────
+# Documentos de trabalho interno
+# ─────────────────────────────────────────────
+# Ficam no disco e continuam funcionando normalmente — só não são publicados.
+# Quem clona o kit quer o código e o README, não o plano de execução do autor
+# nem o log de decisões.
+#
+# ATENÇÃO: HANDOFF.md é o ponto único de memória do projeto e, a partir daqui,
+# existe SÓ nesta máquina. Não há backup no git. Se a pasta se perder, o
+# histórico de decisões vai junto.
+CLAUDE.md
+HANDOFF.md
+IMPLEMENTACAO.md
