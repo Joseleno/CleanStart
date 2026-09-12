@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Testa handler com os repositórios substituídos por NSubstitute — sem banco, sem container. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanStart.Application\CleanStart.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+</Project>

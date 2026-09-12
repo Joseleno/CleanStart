@@ -5,18 +5,49 @@
     referenciam só o nome. Evita o cenário em que dois projetos da mesma solução resolvem
     versões diferentes do mesmo pacote.
 
-    Ainda vazio de PackageVersion de propósito — os pacotes entram a partir da T0.2.
-
     Quando entrarem source generators e analyzers (Mediator.SourceGenerator, Riok.Mapperly),
     eles vão com PrivateAssets="all" no PackageReference: sem isso vazam como dependência
     transitiva para quem consumir os assemblies.
+
+    Versões verificadas no NuGet em 12/09/2026. Não subir nenhuma sem checar antes — duas linhas
+    têm armadilha conhecida e estão anotadas abaixo.
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!--
+    Infraestrutura de teste.
+
+    xUnit v3 (pacote `xunit.v3`) não é o v2 com número maior: cada projeto de teste virou um
+    executável próprio rodando sobre Microsoft.Testing.Platform (MTP). Consequências, todas
+    verificadas rodando `dotnet test` no SDK 10.0.401:
+
+    - os projetos levam `OutputType=Exe`;
+    - nada de `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` ou `coverlet.collector` —
+      são do mundo VSTest, e no .NET 10 o VSTest deixou de rodar projeto MTP;
+    - o opt-in no MTP fica no `global.json` (seção `test.runner`), sem o qual `dotnet test` falha;
+    - cobertura vem de `Microsoft.Testing.Extensions.CodeCoverage`, o equivalente MTP do coverlet.
+  -->
+  <ItemGroup Label="Testes">
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
+
+    <!-- Apache-2.0, API idêntica à da FluentAssertions, que virou licença comercial na v8 (ADR 0008). -->
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
+
+    <!-- NSubstitute e não Moq: o Moq embarcou SponsorLink, que extraía e-mail de quem compilava. -->
+    <PackageVersion Include="NSubstitute" Version="6.2.0" />
+
+    <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
+
+    <!-- Banco e cache de verdade em container. O provider InMemory do EF Core é proibido aqui. -->
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.15.0" />
+
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageVersion Include="Bogus" Version="35.6.5" />
   </ItemGroup>
 
 </Project>

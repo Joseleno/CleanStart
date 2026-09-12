@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Referencia as quatro camadas de propósito: o NetArchTest inspeciona assembly carregado, então
+    o projeto precisa de todos eles em mãos para afirmar que Domain não depende de Infrastructure.
+    É o único projeto da solução autorizado a referenciar tudo — e a única exceção às regras de
+    dependência, porque ele as verifica em vez de participar delas.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanStart.Domain\CleanStart.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CleanStart.Application\CleanStart.Application.csproj" />
+    <ProjectReference Include="..\..\src\CleanStart.Infrastructure\CleanStart.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CleanStart.Api\CleanStart.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+</Project>

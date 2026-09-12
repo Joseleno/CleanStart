@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Sobe a Api em memória (WebApplicationFactory) e exercita o endpoint por HTTP, com banco e cache
+    em container. Cada endpoint testa o caminho happy e pelo menos um de erro.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanStart.Api\CleanStart.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+</Project>

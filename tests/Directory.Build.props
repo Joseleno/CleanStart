@@ -1,0 +1,34 @@
+<Project>
+
+  <!-- Herda o Directory.Build.props da raiz (net10.0, nullable, warnings como erro). -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove($(MSBuildThisFile), $(MSBuildThisFileDirectory)..))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <!--
+      xUnit v3 roda cada projeto de teste como executável próprio — daí o OutputType=Exe.
+      É a diferença estrutural em relação ao v2, não um detalhe de configuração.
+    -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      CA1707 (sem underscore em nome de membro) vale em código de produção, mas em teste a
+      convenção é justamente `Metodo_Cenario_ResultadoEsperado` — o underscore é o que separa as
+      três partes e faz o nome do teste que falhou ser legível no relatório. Desligado apenas em
+      tests/, nunca na raiz.
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <!-- Infraestrutura de teste comum aos cinco projetos. -->
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="AwesomeAssertions" />
+  </ItemGroup>
+
+</Project>
