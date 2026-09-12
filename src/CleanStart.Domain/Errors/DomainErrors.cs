@@ -88,6 +88,25 @@ public static class DomainErrors
             "Todos os itens de um pedido devem usar a mesma moeda.");
     }
 
+    /// <summary>Erros do agregado <c>Customer</c>.</summary>
+    public static class Customer
+    {
+        /// <summary>Nome ausente, em branco ou fora do tamanho aceitável.</summary>
+        public static Error NomeInvalido() => Error.Validation(
+            "Customer.NomeInvalido",
+            "O nome do cliente é obrigatório e deve ter entre 2 e 200 caracteres.");
+
+        /// <summary>Cliente não encontrado pela identidade informada.</summary>
+        public static Error NaoEncontrado(Guid id) => Error.NotFound(
+            "Customer.NaoEncontrado",
+            $"Não existe cliente com a identidade '{id}'.");
+
+        /// <summary>Exclusão de um cliente que já estava excluído.</summary>
+        public static Error JaExcluido() => Error.Conflict(
+            "Customer.JaExcluido",
+            "O cliente já está excluído.");
+    }
+
     /// <summary>Erros do value object <c>Document</c>.</summary>
     public static class Document
     {
