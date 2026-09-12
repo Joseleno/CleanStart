@@ -98,6 +98,14 @@ dotnet_style_qualification_for_property = false:warning
 dotnet_style_qualification_for_method = false:warning
 dotnet_style_qualification_for_event = false:warning
 
+#### Analyzers: supressões com motivo ####
+
+# CA1716 reclama de tipo cujo nome colide com palavra reservada de OUTRA linguagem .NET — no caso,
+# `Error` é statement em VB. O nome é contrato do domínio (CLAUDE.md) e a regra existe para quem expõe
+# biblioteca a consumidores em VB, o que não é o caso de um kit C#. Trocar `Error` por `DomainError` só
+# para agradar a regra pioraria o código que o leitor vem estudar.
+dotnet_diagnostic.CA1716.severity = none
+
 #### Nomenclatura ####
 
 # Identificadores em inglês; comentários em português (ver CLAUDE.md).
