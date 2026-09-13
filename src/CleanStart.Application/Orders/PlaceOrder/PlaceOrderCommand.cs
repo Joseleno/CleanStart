@@ -19,6 +19,16 @@ namespace CleanStart.Application.Orders.PlaceOrder;
 /// <param name="CustomerId">Cliente que faz o pedido.</param>
 /// <param name="Currency">Moeda do pedido, em três letras (ex.: <c>BRL</c>).</param>
 /// <param name="Items">Itens do pedido. Precisa de ao menos um.</param>
+/// <remarks>
+/// <b>Não implementa <c>ICacheInvalidator</c>, e é deliberado.</b> O plano previa invalidar cache ao criar um
+/// pedido, mas criar não torna nada obsoleto: o id nasce dentro do <c>Order.Place</c>, então não existia entrada
+/// de cache para ele antes — e não há o que remover. Quem invalida é o <c>CancelOrder</c>, que altera um pedido
+/// que já pode ter sido lido e guardado.
+/// <para>
+/// A listagem de pedidos (T5.2) é outro caso: ali a criação <b>muda</b> um resultado que já existe, e a decisão
+/// de invalidar precisa ser retomada quando aquela query passar a ser cacheada.
+/// </para>
+/// </remarks>
 public sealed record PlaceOrderCommand(
     Guid CustomerId,
     string Currency,

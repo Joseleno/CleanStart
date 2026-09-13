@@ -87,5 +87,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(order => order.CustomerId)
             .HasDatabaseName("ix_orders_customer_id");
+
+        // Índice composto na ordem exata da listagem por keyset: `ORDER BY created_at DESC, id DESC` com
+        // `WHERE (created_at, id) < (...)`. Sem ele a paginação por cursor não entrega o que promete — o
+        // planejador cai em scan e o custo volta a crescer com a página, que é o defeito do offset.
+        builder.HasIndex(order => new { order.CreatedAt, order.Id })
+            .IsDescending(true, true)
+            .HasDatabaseName("ix_orders_created_at_id");
     }
 }

@@ -50,6 +50,12 @@ internal static partial class BehaviorLogs
         double elapsedMs);
 
     [LoggerMessage(
+        EventId = 1004,
+        Level = LogLevel.Warning,
+        Message = "Falha ao invalidar a chave de cache {CacheKey}. O dado foi gravado; o cache pode servir valor antigo até expirar.")]
+    public static partial void FalhaAoInvalidarCache(ILogger logger, Exception exception, string cacheKey);
+
+    [LoggerMessage(
         EventId = 1003,
         Level = LogLevel.Debug,
         Message = "Consultando cache de {MessageName} com chave {CacheKey}")]

@@ -1,4 +1,6 @@
 using CleanStart.Application.Common.Abstractions;
+using CleanStart.Application.Orders.GetOrderById;
+using CleanStart.Application.Orders.ListOrders;
 using CleanStart.Domain.Customers;
 using CleanStart.Domain.Orders;
 using CleanStart.Infrastructure.Configuration;
@@ -112,6 +114,10 @@ public static class DependencyInjection
 
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+        // Leitura projetada, separada do repositório: o lado de consulta não materializa o agregado.
+        services.AddScoped<IOrderReader, OrderReader>();
+        services.AddScoped<IOrdersPageReader, OrdersPageReader>();
 
         return services;
     }

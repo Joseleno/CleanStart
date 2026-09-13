@@ -1,8 +1,12 @@
 using Carter;
 using CleanStart.Api.Extensions;
 using CleanStart.Application.Common.Abstractions;
+using CleanStart.Application.Orders.CancelOrder;
+using CleanStart.Application.Orders.GetOrderById;
+using CleanStart.Application.Orders.ListOrders;
 using CleanStart.Application.Orders.PlaceOrder;
 using CleanStart.Domain.Common;
+using CleanStart.Domain.Orders;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,6 +52,96 @@ public sealed class OrderModule : ICarterModule
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        grupo.MapGet("/", ListarPedidos)
+            .WithName("ListarPedidos")
+            .WithSummary("Lista pedidos")
+            .WithDescription(
+                "Lista pedidos com filtro por status e período. A paginação é por cursor: use o "
+                + "`proximoCursor` da resposta para pedir a página seguinte. Cursor nulo significa fim.")
+            .Produces<OrdersPage>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        grupo.MapGet("/{id:guid}", BuscarPedido)
+            .WithName("BuscarPedido")
+            .WithSummary("Busca um pedido pela identidade")
+            .WithDescription(
+                "Devolve o pedido com os seus itens. O resultado é cacheado por cinco minutos e invalidado "
+                + "quando o pedido é alterado.")
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        grupo.MapPost("/{id:guid}/cancel", CancelarPedido)
+            .WithName("CancelarPedido")
+            .WithSummary("Cancela um pedido")
+            .WithDescription(
+                "Cancela um pedido pendente ou pago. Pedido já enviado não pode ser cancelado — o que existe "
+                + "a partir daí é devolução, que é outro processo.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/orders/{id}/cancel</c>
+    /// </summary>
+    /// <remarks>
+    /// <c>POST</c> num sub-recurso, e não <c>DELETE</c> no pedido: cancelar não remove nada, muda a situação de
+    /// um registro que continua existindo. <c>DELETE</c> sugeriria que o pedido some — e ele é histórico.
+    /// </remarks>
+    private static async Task<IResult> CancelarPedido(
+        Guid id,
+        ISender sender,
+        ICorrelationIdProvider correlationId,
+        CancellationToken cancellationToken)
+    {
+        Result resultado = await sender.Send(new CancelOrderCommand(id), cancellationToken);
+
+        return resultado.ParaNoContent(correlationId.CorrelationId);
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/orders</c>
+    /// </summary>
+    /// <remarks>
+    /// Os filtros vêm da query string, e o binding os converte. <c>status</c> inválido vira 400 do próprio
+    /// binding — antes do handler, como o <c>:guid</c> faz na rota do item.
+    /// </remarks>
+    private static async Task<IResult> ListarPedidos(
+        ISender sender,
+        ICorrelationIdProvider correlationId,
+        CancellationToken cancellationToken,
+        OrderStatus? status = null,
+        DateTimeOffset? de = null,
+        DateTimeOffset? ate = null,
+        string? cursor = null,
+        int tamanho = ListOrdersQuery.TamanhoPadrao)
+    {
+        Result<OrdersPage> resultado = await sender.Send(
+            new ListOrdersQuery(status, de, ate, cursor, tamanho),
+            cancellationToken);
+
+        return resultado.ParaOk(correlationId.CorrelationId);
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/orders/{id}</c>
+    /// </summary>
+    /// <remarks>
+    /// A restrição <c>:guid</c> na rota faz um id malformado virar <b>404 do roteamento</b>, antes de qualquer
+    /// código rodar — em vez de chegar ao handler e falhar na conversão.
+    /// </remarks>
+    private static async Task<IResult> BuscarPedido(
+        Guid id,
+        ISender sender,
+        ICorrelationIdProvider correlationId,
+        CancellationToken cancellationToken)
+    {
+        Result<OrderResponse> resultado = await sender.Send(
+            new GetOrderByIdQuery(id),
+            cancellationToken);
+
+        return resultado.ParaOk(correlationId.CorrelationId);
     }
 
     /// <summary>

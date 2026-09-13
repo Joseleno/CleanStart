@@ -86,6 +86,16 @@ public static class DomainErrors
         public static Error ItensEmMoedasDiferentes() => Error.Validation(
             "Order.ItensEmMoedasDiferentes",
             "Todos os itens de um pedido devem usar a mesma moeda.");
+
+        /// <summary>Cursor de paginação malformado.</summary>
+        public static Error CursorInvalido() => Error.Validation(
+            "Order.CursorInvalido",
+            "O cursor de paginação é inválido. Use o valor devolvido pela página anterior.");
+
+        /// <summary>Pedido não encontrado pela identidade informada.</summary>
+        public static Error NaoEncontrado(Guid id) => Error.NotFound(
+            "Order.NaoEncontrado",
+            $"Não existe pedido com a identidade '{id}'.");
     }
 
     /// <summary>Erros do agregado <c>Customer</c>.</summary>

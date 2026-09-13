@@ -15,8 +15,27 @@ namespace CleanStart.Domain.Orders;
 /// </para>
 /// </remarks>
 /// <param name="Value">O valor subjacente.</param>
-public readonly record struct OrderId(Guid Value)
+public readonly record struct OrderId(Guid Value) : IComparable<OrderId>
 {
+    /// <summary>
+    /// Ordena pela identidade subjacente.
+    /// </summary>
+    /// <remarks>
+    /// Existe para a paginação por keyset, que precisa de <c>ORDER BY ... , id DESC</c> e da comparação
+    /// <c>id &lt; :cursor</c> para desempatar datas iguais. Com UUID v7 a ordem da identidade é a ordem de
+    /// criação, então ordenar por ela é ordenar cronologicamente — o que torna o desempate previsível em vez de
+    /// arbitrário.
+    /// </remarks>
+    public int CompareTo(OrderId other) => Value.CompareTo(other.Value);
+
+    public static bool operator <(OrderId left, OrderId right) => left.CompareTo(right) < 0;
+
+    public static bool operator >(OrderId left, OrderId right) => left.CompareTo(right) > 0;
+
+    public static bool operator <=(OrderId left, OrderId right) => left.CompareTo(right) <= 0;
+
+    public static bool operator >=(OrderId left, OrderId right) => left.CompareTo(right) >= 0;
+
     /// <summary>Gera uma identidade nova.</summary>
     /// <remarks>
     /// UUID v7 e não v4: o v7 embute timestamp no prefixo, então as chaves nascem ordenadas no tempo.
