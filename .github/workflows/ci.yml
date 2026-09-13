@@ -110,6 +110,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Obrigatório para o cache de camadas abaixo: o driver padrão do Docker no runner NÃO exporta cache, e o
+      # build falha com "Cache export is not supported for the docker driver". O Buildx troca o driver por um
+      # que suporta, e é a única razão deste passo existir.
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Construir a imagem
         uses: docker/build-push-action@v6
         with:
