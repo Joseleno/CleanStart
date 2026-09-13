@@ -68,6 +68,29 @@
   </ItemGroup>
 
   <!--
+    Api.
+
+    Carter para endpoints (sem controllers) e Scalar para a UI do OpenAPI. O .NET 10 já traz a geração do
+    documento OpenAPI embutida — não é preciso Swashbuckle.
+  -->
+  <ItemGroup Label="Api">
+    <PackageVersion Include="Carter" Version="10.0.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+
+    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+
+    <!-- Health checks de Postgres e Redis, para o /health/ready. -->
+    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
+  </ItemGroup>
+
+  <!--
     Infraestrutura de teste.
 
     xUnit v3 (pacote `xunit.v3`) não é o v2 com número maior: cada projeto de teste virou um
