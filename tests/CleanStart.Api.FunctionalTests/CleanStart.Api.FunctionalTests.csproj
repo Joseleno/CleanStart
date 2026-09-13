@@ -4,8 +4,17 @@
     Sobe a Api em memória (WebApplicationFactory) e exercita o endpoint por HTTP, com banco e cache
     em container. Cada endpoint testa o caminho happy e pelo menos um de erro.
   -->
+  <!--
+    A Infrastructure é referenciada explicitamente, e não só através da Api: estes testes semeiam dados pelo
+    AppDbContext (ver CleanStartApiFactory.ComEscopoAsync), então o tipo é usado no código daqui.
+
+    Depender da referência transitiva pela Api compila enquanto a Api mantiver a mesma cadeia de pacotes — e
+    quebra no dia em que ela mudar, com um CS0234 que parece não ter relação com a alteração feita.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\CleanStart.Api\CleanStart.Api.csproj" />
+    <ProjectReference Include="..\..\src\CleanStart.Infrastructure\CleanStart.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CleanStart.Domain\CleanStart.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -13,6 +22,13 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers.Redis" />
     <PackageReference Include="Bogus" />
+
+    <!--
+      Usados direto nos testes: o pacote base para DbContext e ToListAsync; o Relational para MigrateAsync,
+      que é método de extensão dele e não do base.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
 </Project>
