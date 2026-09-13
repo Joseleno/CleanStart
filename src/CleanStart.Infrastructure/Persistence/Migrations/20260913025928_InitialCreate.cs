@@ -21,8 +21,8 @@ namespace CleanStart.Infrastructure.Persistence.Migrations
                     document = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
-                    UpdatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
                 },
@@ -41,8 +41,8 @@ namespace CleanStart.Infrastructure.Persistence.Migrations
                     currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
-                    UpdatedBy = table.Column<Guid>(type: "uuid", nullable: true)
+                    created_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {

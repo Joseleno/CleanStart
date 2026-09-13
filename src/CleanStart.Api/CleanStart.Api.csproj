@@ -1,8 +1,52 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Api → Application. Endpoint envia mensagem pelo ISender e traduz o Result em HTTP. -->
+  <PropertyGroup>
+    <!--
+      Identificador do cofre de User Secrets. Não é segredo — é só o nome da pasta onde o dotnet guarda os
+      segredos desta máquina, fora do repositório. A connection string e a chave JWT de desenvolvimento vivem
+      lá, nunca em appsettings versionado.
+    -->
+    <UserSecretsId>33dd6ef1-53b5-4c63-8a7e-e208bc191ea3</UserSecretsId>
+  </PropertyGroup>
+
+  <!--
+    Api → Application, e também → Infrastructure.
+
+    A referência à Infrastructure existe só para o composition root chamar AddInfrastructure(): é o ponto onde
+    as interfaces da Application são ligadas às implementações. Nenhum endpoint conhece DbContext ou repositório
+    concreto, e há regra de arquitetura garantindo que a Application não referencia a Infrastructure de volta.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\CleanStart.Application\CleanStart.Application.csproj" />
+    <ProjectReference Include="..\CleanStart.Infrastructure\CleanStart.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Carter" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+  </ItemGroup>
+
+  <!--
+    Com top-level statements, a classe Program gerada é internal — e o WebApplicationFactory<Program> dos testes
+    funcionais precisa alcançá-la. É a forma recomendada pela Microsoft, e melhor que declarar
+    `public partial class Program` só para satisfazer o teste: aqui a exceção fica visível e nomeada.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CleanStart.Api.FunctionalTests" />
   </ItemGroup>
 
 </Project>

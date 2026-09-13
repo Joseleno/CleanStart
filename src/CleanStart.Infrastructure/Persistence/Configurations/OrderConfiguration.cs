@@ -51,6 +51,22 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.UpdatedAt)
             .HasColumnName("updated_at");
 
+
+
+        // Autoria: sem este mapeamento o EF cai na convenção padrão e gera "CreatedBy"/"UpdatedBy" em PascalCase,
+
+
+        // fora do snake_case de todas as outras colunas. Foi o que aconteceu na primeira migration.
+
+
+        builder.Property(order => order.CreatedBy)
+            .HasColumnName("created_by");
+
+
+
+        builder.Property(order => order.UpdatedBy)
+            .HasColumnName("updated_by");
+
         // Total é calculado a partir dos itens — não existe coluna para ele. Sem este Ignore, o EF tentaria
         // persistir a propriedade e o modelo nem construiria.
         builder.Ignore(order => order.Total);
