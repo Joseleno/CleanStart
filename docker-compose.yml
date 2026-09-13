@@ -30,6 +30,10 @@ services:
       # Traces e métricas vão para o Jaeger via OTLP.
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
       OTEL_SERVICE_NAME: "cleanstart-api"
+
+      # Sobrescreve o endereço do Seq definido no appsettings.Development.json: dentro da rede do compose o
+      # serviço é alcançado pelo nome, e "localhost" apontaria para o próprio contêiner da API.
+      Serilog__WriteTo__1__Args__serverUrl: "http://seq:80"
     depends_on:
       # `service_healthy` e não apenas `service_started`: o contêiner do Postgres aceita conexão segundos depois
       # de iniciar, e sem esperar o health check a API sobe, tenta migrar e falha antes de o banco responder.
@@ -72,8 +76,10 @@ services:
       timeout: 3s
       retries: 10
 
-  # Logs estruturados navegáveis. O Serilog escreve JSON no console; para enviá-los ao Seq, acrescente o sink
-  # Serilog.Sinks.Seq e aponte para http://seq:5341.
+  # Logs estruturados navegáveis, em http://localhost:5341. A API já envia para cá — o sink está configurado no
+  # appsettings.Development.json, e o endereço é sobrescrito acima para o nome do serviço na rede do compose.
+  #
+  # Filtrar por CorrelationId aqui é o que liga uma reclamação de usuário à requisição exata que falhou.
   seq:
     image: datalust/seq:latest
     environment:

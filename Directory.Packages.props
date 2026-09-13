@@ -89,6 +89,13 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
 
+    <!--
+      Seq em desenvolvimento: o console entrega JSON estruturado, mas ninguém lê JSON no terminal procurando
+      uma requisição específica. O sink só é ativado pelo appsettings.Development.json — em produção o log vai
+      para o coletor do ambiente, que é quem sabe para onde.
+    -->
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.1.0" />
+
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
