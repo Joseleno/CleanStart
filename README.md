@@ -825,13 +825,23 @@ dotnet test tests/CleanStart.ArchitectureTests/CleanStart.ArchitectureTests.cspr
 
 ## Contribuindo
 
-Issues e PRs são bem-vindos. Antes de abrir PR:
+Issues e PRs são bem-vindos. O [CONTRIBUTING.md](CONTRIBUTING.md) tem o passo a passo — e, principalmente, **as
+regras que o build impõe**: warnings como erro, `var` só com o tipo aparente, e dez regras de arquitetura que
+reprovam com o nome do tipo infrator.
 
-1. `dotnet test` precisa passar — incluindo `ArchitectureTests`.
-2. Mudança de decisão técnica vem acompanhada de ADR.
-3. Feature nova vem com teste no nível apropriado.
+O resumo:
 
-Discussões sobre "por que a decisão X" vão na aba Discussions, não em issue.
+1. `dotnet build` e `dotnet test` verdes — incluindo `ArchitectureTests`.
+2. Feature nova vem com teste no nível apropriado.
+3. Decisão técnica nova vem acompanhada de um [ADR](docs/adr/) — e a seção de consequências declara o custo.
+4. Se uma regra de arquitetura atrapalhar, **abra uma issue em vez de relaxar o teste.**
+
+Para mudança maior que uma correção pontual, abra uma issue antes: este é um kit de referência, e uma
+funcionalidade útil pode ser recusada por tornar o exemplo mais difícil de ler.
+
+Dúvida sobre "por que a decisão X" vai na aba Discussions — ou já está respondida nos ADRs.
+
+Participantes seguem o [Código de Conduta](CODE_OF_CONDUCT.md).
 
 ---
 
