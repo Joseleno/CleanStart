@@ -10,4 +10,13 @@
     <PackageReference Include="Bogus" />
   </ItemGroup>
 
+  <!--
+    Referência direta ao Mediator, só aqui: um teste afirma que os marcadores próprios continuam herdando das
+    interfaces dele, que é como o source generator descobre os handlers. É a exceção que prova a regra — o
+    código de produção da Application não menciona o namespace Mediator fora de Common/Messaging.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+  </ItemGroup>
+
 </Project>

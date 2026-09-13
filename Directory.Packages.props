@@ -30,6 +30,36 @@
     - o opt-in no MTP fica no `global.json` (seção `test.runner`), sem o qual `dotnet test` falha;
     - cobertura vem de `Microsoft.Testing.Extensions.CodeCoverage`, o equivalente MTP do coverlet.
   -->
+  <!--
+    Application.
+
+    Mediator (martinothamar) e não MediatR: o MediatR passou a exigir licença comercial. Fixado no 3.0.2,
+    que é o estável — o 3.1.0, alinhado ao .NET 10, está em RC (ver decisão 2 do HANDOFF). Roda em net10.0
+    sem problema, e os handlers ficam atrás de marcadores próprios para que subir ao 3.1 seja mudança de
+    uma camada só.
+  -->
+  <ItemGroup Label="Application">
+    <PackageVersion Include="Mediator.Abstractions" Version="3.0.2" />
+    <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+
+    <!--
+      HybridCache: cache de dois níveis (memória + distribuído) com stampede protection embutida — o
+      problema que o IDistributedCache cru deixa para quem usa. O CachingBehavior o consome atrás de
+      abstração própria, para que a Application não dependa de pacote de infraestrutura.
+    -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.10.0" />
+
+    <!--
+      Mapperly (Riok) e não AutoMapper: o AutoMapper passou a exigir licença comercial. Gera o código de
+      mapeamento em tempo de compilação — o mapa errado é erro de build, não exception em runtime.
+      O 5.0 só existe em -next.
+    -->
+    <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Testes">
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />

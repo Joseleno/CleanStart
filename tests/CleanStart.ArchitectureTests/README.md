@@ -17,6 +17,12 @@ diria apenas "expected true, found false", que informa que a arquitetura foi vio
 | 4 | Infrastructure não referencia Api | `Infrastructure_NaoDependeDeApi` |
 | 7 | Entidade não expõe setter público | `Entidades_NaoExpoemSetterPublico` (T1.3) |
 | — | Raiz de agregado expõe coleção somente leitura | `RaizesDeAgregado_ExpoemColecoesSomenteLeitura` (T1.3) |
+| 5 | Handlers são `sealed` | `Handlers_SaoSealed` (T2.3) |
+| 6 | Commands e queries são `record` | `CommandsEQueries_SaoRecord` (T2.3) |
+| — | Fora de `Common/Messaging` e `Common/Behaviors`, nada referencia `Mediator` | `ForaDosMarcadores_NadaReferenciaOMediator...` (T2.1) |
+
+**As sete regras da T0.3 estão implementadas.** As regras 5, 6 e 7 chegaram depois da fase que as previa, cada
+uma junto com o primeiro tipo que elas podiam inspecionar — ver decisão 17.
 
 Cada uma foi verificada **reprovando**, não só passando: introduzir `DbContext` no Domain faz a regra 2 falhar
 nomeando o tipo, e trocar `private set` por `set` em `Order.Status` faz a regra 7 falhar nomeando a propriedade.
@@ -30,20 +36,20 @@ vazio.
 `private set` e `init` são permitidos de propósito: o primeiro é como o método de domínio atribui, o segundo só
 atua na construção. O que a regra proíbe é o setter **acessível de fora**.
 
-## Adiadas para a Fase 2 — decisão, não esquecimento
+A regra de mensageria **ignora código gerado** (`CompilerGeneratedAttribute`, `GeneratedCodeAttribute` e o
+namespace `Mediator` dentro do assembly). O source generator do Mediator emite o pipeline inteiro na Application,
+e ele referencia o namespace dele em toda assinatura porque é o trabalho dele — incluí-lo faria a regra acusar
+~40 violações que ninguém escreveu e ninguém pode corrigir.
 
-As regras 5 e 6 da T0.3 do `IMPLEMENTACAO.md` dependem de tipos que **ainda não existem**:
+## O guard contra teste vazio
 
-| # | Regra | Por que não agora |
-|---|---|---|
-| 5 | Handlers são `sealed` | Não há handler até a Fase 2 |
-| 6 | Commands e queries são `record` | Idem |
+Toda regra que varre tipos começa afirmando que **encontrou algo para inspecionar**
+(`handlers.Should().NotBeEmpty()`). Sem isso, um namespace renomeado ou uma base trocada fariam o teste passar
+sem verificar nada, e ninguém perceberia — é o verde vacuoso que a decisão 17 do HANDOFF existe para evitar.
 
-Escritas hoje, elas varreriam zero tipos e passariam por vacuidade — verde que não prova nada e que, pior,
-**continuaria verde se alguém escrevesse o primeiro handler violando a regra**, porque ninguém revisita um teste
-que nunca reclamou. O critério adotado aqui é o mesmo das regras 1 a 4: uma regra entra quando é capaz de
-reprovar.
+O guard já trabalhou: as regras 5 e 6 foram escritas na T2.1 e **removidas no mesmo passo**, porque ele reprovou
+— a Application só tinha os marcadores, sem handler nem command de verdade. Voltaram na T2.3, quando havia o que
+inspecionar, e foram verificadas reprovando.
 
-Entram na **T2.1**, com o primeiro handler e o primeiro command — e o teste deve ser verificado reprovando antes
-de ser considerado pronto. A regra 7 seguiu esse caminho: ficou de fora da T0.3 e entrou na T1.3, junto com a
-primeira entidade.
+Nota para quem escrever regra sobre `record`: ele não tem marca própria em metadados. O sinal confiável é o
+método sintetizado `<Clone>$`, que o compilador gera para todo record e para nada mais.
