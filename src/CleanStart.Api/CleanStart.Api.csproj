@@ -25,13 +25,24 @@
     <PackageReference Include="Carter" />
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.Seq" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+
+    <!--
+      O rastreamento do banco é ligado aqui, com as demais instrumentações, e por isso o pacote é referenciado
+      aqui: o AddNpgsql() do TracerProviderBuilder vem dele. Deixá-lo só na Infrastructure fazia o build
+      depender de o pacote vazar por referência transitiva — funciona até alguém limpar o cache.
+    -->
+    <PackageReference Include="Npgsql.OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
 

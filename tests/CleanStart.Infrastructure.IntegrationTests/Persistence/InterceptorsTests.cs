@@ -178,7 +178,8 @@ public sealed class InterceptorsTests
             .Select(entrada => entrada.Entity)];
 
         mensagens.Should().HaveCount(1);
-        mensagens[0].Type.Should().Be("CleanStart.Domain.Orders.Events.OrderPlacedEvent");
+        // O nome curto do mapa, não o nome do tipo: é o identificador estável que trafega na tabela.
+        mensagens[0].Type.Should().Be("order-placed");
         mensagens[0].Content.Should().Contain("orderId", "serializado em camelCase para o consumidor");
         mensagens[0].ProcessedOn.Should().BeNull("nasce pendente");
 

@@ -1,0 +1,41 @@
+# O que não deve entrar no contexto de build.
+#
+# Sem este arquivo, o Docker envia a pasta inteira ao daemon antes de executar a primeira instrução — incluindo
+# bin/, obj/, .git/ e os documentos internos. Isso custa tempo em toda build e, pior, invalida o cache de camadas
+# sempre que qualquer um desses arquivos muda, ainda que nenhum deles seja copiado.
+
+# Saída de build. Copiá-la para dentro é como se consegue o clássico "funciona aqui e não no contêiner": binário
+# compilado noutra máquina, com outro SDK, sobrepondo o que a imagem acabou de compilar.
+**/bin/
+**/obj/
+
+# Histórico e metadados do git.
+.git/
+.gitignore
+.gitattributes
+
+# IDE e ferramentas.
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Documentos internos do projeto — não versionados e sem uso na imagem (decisão 13).
+CLAUDE.md
+HANDOFF.md
+IMPLEMENTACAO.md
+.claude/
+
+# Testes: a imagem carrega a aplicação, não a suíte. Quem roda teste é a CI, com o código completo.
+tests/
+
+# Infraestrutura de execução, que descreve como subir a imagem e não faz parte dela.
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Nunca. Segredo em imagem fica no histórico de camadas, e continua lá depois de "removido" numa camada seguinte.
+**/appsettings.Production.json
+**/*.pfx
+**/*.key
+.env

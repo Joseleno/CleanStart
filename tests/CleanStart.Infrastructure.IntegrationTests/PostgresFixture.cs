@@ -1,4 +1,5 @@
 using CleanStart.Application.Common.Abstractions;
+using CleanStart.Infrastructure.Configuration;
 using CleanStart.Infrastructure.Persistence;
 using CleanStart.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
@@ -57,8 +58,18 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// Cria um contexto novo, com os três interceptors na ordem de produção.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Um contexto por chamada, não um compartilhado: o change tracker guarda as entidades que já viu, e reusar
     /// o contexto faria um teste ler do cache em vez do banco — passando sem provar que a gravação funcionou.
+    /// </para>
+    /// <para>
+    /// <b>O <c>UseNpgsql</c> espelha o de produção, incluindo o <c>EnableRetryOnFailure</c>.</b> A diferença não
+    /// é cosmética: com a estratégia de retry ligada, o EF Core recusa transação iniciada pelo usuário
+    /// (<c>BeginTransactionAsync</c>) fora de <c>CreateExecutionStrategy().ExecuteAsync(...)</c> — e falha em
+    /// runtime, não na compilação. Uma fixture sem retry aprovaria justamente o código que quebra no primeiro
+    /// tick em produção. É o mesmo princípio que proíbe o provider InMemory: teste que não reproduz a
+    /// configuração real aprova o que o banco real reprova.
+    /// </para>
     /// </remarks>
     public AppDbContext CriarContexto()
     {
@@ -68,8 +79,14 @@ public sealed class PostgresFixture : IAsyncLifetime
         ICurrentUser currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(Usuario);
 
+        DatabaseOptions padroes = new();
+
         DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(_container.GetConnectionString())
+            .UseNpgsql(_container.GetConnectionString(), npgsql =>
+            {
+                npgsql.CommandTimeout(padroes.CommandTimeoutSeconds);
+                npgsql.EnableRetryOnFailure(padroes.MaxRetryCount);
+            })
             .AddCleanStartInterceptors(
                 new SoftDeleteInterceptor(clock),
                 new AuditableInterceptor(clock, currentUser),

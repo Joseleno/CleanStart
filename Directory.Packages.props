@@ -62,6 +62,8 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+    <!-- BackgroundService, para o despachante do outbox (T6.1). -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
 
     <!-- Segundo nível do HybridCache. Opcional: sem Redis configurado, o cache é só local. -->
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.12" />
@@ -78,12 +80,38 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.17.3" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
 
+    <!--
+      Validação de JWT (T6.2). O rate limiting não aparece aqui de propósito: Microsoft.AspNetCore.RateLimiting
+      faz parte do SDK Web desde o .NET 7 e não precisa de pacote.
+    -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
 
+    <!--
+      Seq em desenvolvimento: o console entrega JSON estruturado, mas ninguém lê JSON no terminal procurando
+      uma requisição específica. O sink só é ativado pelo appsettings.Development.json — em produção o log vai
+      para o coletor do ambiente, que é quem sabe para onde.
+    -->
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.1.0" />
+
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+
+    <!--
+      Rastreamento do banco, consumido pela Api junto das demais instrumentações. Vem do Npgsql, e não do
+      OpenTelemetry.Instrumentation.EntityFrameworkCore: esse último só existe em beta (1.18.0-beta.1), e o kit
+      não fixa pacote instável. Não se perde nada relevante — quem emite o SQL é o Npgsql, então é ele que tem
+      o comando, a duração e o erro.
+    -->
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+
+    <!-- Resiliência de chamada HTTP externa: retry, circuit breaker e timeout (Polly v8 por baixo). -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
 
     <!-- Health checks de Postgres e Redis, para o /health/ready. -->
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />

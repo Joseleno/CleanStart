@@ -65,7 +65,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await CadastrarClienteAsync("529.982.247-25");
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsJsonAsync(Rota, Pedido(clienteId), ct);
 
@@ -86,7 +86,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await CadastrarClienteAsync("111.444.777-35");
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsJsonAsync(Rota, Pedido(clienteId), ct);
         JsonElement corpo = await resposta.Content.ReadFromJsonAsync<JsonElement>(ct);
@@ -104,7 +104,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
 
             // E o evento foi gravado na mesma transação: é o padrão outbox atravessando a pilha inteira.
             List<string> conteudos = await contexto.OutboxMessages
-                .Where(m => m.Type == "CleanStart.Domain.Orders.Events.OrderPlacedEvent")
+                .Where(m => m.Type == "order-placed")
                 .Select(m => m.Content)
                 .ToListAsync(ct);
 
@@ -119,7 +119,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await CadastrarClienteAsync(DocumentoNovo());
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsJsonAsync(
             Rota,
@@ -139,7 +139,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await CadastrarClienteAsync(DocumentoNovo());
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         object semItens = new { customerId = clienteId, currency = "BRL", items = Array.Empty<object>() };
 
@@ -155,7 +155,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     public async Task ComClienteInexistente_Retorna404ComCodigoDoErro()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsJsonAsync(
             Rota,
@@ -177,7 +177,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await CadastrarClienteAsync(DocumentoNovo());
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsJsonAsync(Rota, Pedido(clienteId, moeda: "BRLL"), ct);
 
@@ -192,7 +192,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
         // O binding do ASP.NET lança BadHttpRequestException antes de o endpoint ser chamado. Sem o catch
         // específico no middleware, isto viraria 500 — dizendo ao cliente que o problema é do servidor.
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         using StringContent conteudo = new(corpo, Encoding.UTF8, "application/json");
 
@@ -205,7 +205,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     public async Task RespostaDeErro_TrazOCorrelationIdRecebido()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         using HttpRequestMessage requisicao = new(HttpMethod.Post, Rota)
         {
@@ -227,7 +227,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     public async Task HealthLive_Responde200SemTocarDependencia()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync("/health/live", ct);
 
@@ -238,7 +238,7 @@ public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixtu
     public async Task HealthReady_Responde200ComBancoECacheNoAr()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync("/health/ready", ct);
 

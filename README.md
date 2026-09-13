@@ -4,7 +4,10 @@
 
 CleanStart não é um template vazio com quatro pastas e um `Program.cs`. É uma solução completa, executável, com uma feature de referência implementada de ponta a ponta, testes em cinco níveis, regras de arquitetura validadas automaticamente e as decisões técnicas documentadas em ADRs.
 
-A ideia é simples: você clona, roda `docker compose up`, tem uma API funcionando em dois minutos — e a partir daí só escreve o domínio do seu problema.
+A ideia é simples: você clona, roda `docker compose up`, prepara o banco com uma flag e tem uma API autenticada
+respondendo em poucos minutos — e a partir daí só escreve o domínio do seu problema.
+
+Comece por **[docs/getting-started.md](docs/getting-started.md)**, que vai do clone ao primeiro pedido criado.
 
 ---
 
@@ -68,7 +71,7 @@ O CleanStart entrega essas cinco coisas resolvidas — e o item 5 resolvido de f
 | Cache | Redis (StackExchange.Redis) + `HybridCache` | Cache distribuído com camada L1 local |
 | Validação | FluentValidation | Integrada ao pipeline do Mediator |
 | Resiliência | Polly (via `Microsoft.Extensions.Http.Resilience`) | Retry, circuit breaker e timeout nas integrações |
-| Logging | Serilog | Log estruturado, sinks console + arquivo + OTLP |
+| Logging | Serilog | Log estruturado em JSON; console, mais Seq em desenvolvimento |
 | Observabilidade | OpenTelemetry | Traces, métricas e logs num padrão só |
 | Testes | xUnit v3, AwesomeAssertions, NSubstitute, Testcontainers, Bogus | Unitário, integração e funcional |
 | Arquitetura | **NetArchTest** | Regras de camada como teste |
@@ -98,7 +101,7 @@ CleanStart/
 │   │   ├── Orders/
 │   │   │   ├── Order.cs                    # Raiz de agregado
 │   │   │   ├── OrderItem.cs                # Entidade filha
-│   │   │   ├── OrderStatus.cs              # Enum rico / smart enum
+│   │   │   ├── OrderStatus.cs              # Pending, Paid, Shipped, Cancelled
 │   │   │   ├── Events/OrderPlacedEvent.cs
 │   │   │   └── IOrderRepository.cs         # Interface vive no domínio
 │   │   ├── Customers/
@@ -112,50 +115,74 @@ CleanStart/
 │   │
 │   ├── CleanStart.Application/             # Casos de uso. Depende só do Domain.
 │   │   ├── Common/
-│   │   │   ├── Result.cs                   # Result<T> — sucesso ou Error
-│   │   │   ├── IUnitOfWork.cs
-│   │   │   ├── ICurrentUser.cs             # Abstração do usuário autenticado
-│   │   │   ├── IDateTimeProvider.cs        # Tempo injetável = teste determinístico
+│   │   │   ├── Abstractions/               # O que a Application precisa e não implementa
+│   │   │   │   ├── IUnitOfWork.cs
+│   │   │   │   ├── ICurrentUser.cs         # Abstração do usuário autenticado
+│   │   │   │   ├── IDateTimeProvider.cs    # Tempo injetável = teste determinístico
+│   │   │   │   ├── ICacheService.cs
+│   │   │   │   ├── ICacheInvalidator.cs
+│   │   │   │   ├── IOutboxPublisher.cs     # Fronteira do outbox (ADR 0006)
+│   │   │   │   └── IExchangeRateClient.cs  # Exemplo de dependência externa
+│   │   │   ├── Messaging/                  # Marcadores próprios (ADR 0009)
+│   │   │   │   ├── ICommand.cs             # O único lugar que menciona o Mediator
+│   │   │   │   ├── ICommandHandler.cs
+│   │   │   │   ├── IQuery.cs
+│   │   │   │   └── IQueryHandler.cs
 │   │   │   └── Behaviors/
-│   │   │       ├── ValidationBehavior.cs
 │   │   │       ├── LoggingBehavior.cs
+│   │   │       ├── ValidationBehavior.cs
 │   │   │       ├── TransactionBehavior.cs
-│   │   │       └── CachingBehavior.cs
+│   │   │       └── CacheInvalidationBehavior.cs
 │   │   ├── Orders/
 │   │   │   ├── PlaceOrder/                 # Vertical slice: 1 caso de uso = 1 pasta
 │   │   │   │   ├── PlaceOrderCommand.cs
 │   │   │   │   ├── PlaceOrderHandler.cs
 │   │   │   │   ├── PlaceOrderValidator.cs
-│   │   │   │   └── PlaceOrderResponse.cs
-│   │   │   ├── GetOrderById/
-│   │   │   ├── ListOrders/
-│   │   │   └── CancelOrder/
-│   │   └── Mapping/OrderMapper.cs          # Mapperly [Mapper] partial class
+│   │   │   │   ├── PlaceOrderResponse.cs
+│   │   │   │   └── OrderMapper.cs          # Mapperly, dentro do slice que o usa
+│   │   │   ├── GetOrderById/               # Query + IOrderReader (porta do slice)
+│   │   │   ├── ListOrders/                 # Paginação por cursor
+│   │   │   ├── CancelOrder/
+│   │   │   └── NotifyOrderPlaced/          # Reação a evento, nomeada pela reação
+│   │   └── DependencyInjection.cs
 │   │
 │   ├── CleanStart.Infrastructure/          # Detalhes. Implementa as interfaces.
 │   │   ├── Persistence/
-│   │   │   ├── AppDbContext.cs
+│   │   │   ├── AppDbContext.cs             # Implementa IUnitOfWork (sem classe à parte)
+│   │   │   ├── AppDbContextFactory.cs      # Design-time, para o dotnet ef
 │   │   │   ├── Configurations/             # IEntityTypeConfiguration por entidade
-│   │   │   ├── Repositories/
+│   │   │   ├── Repositories/               # Repositórios e readers
 │   │   │   ├── Interceptors/
 │   │   │   │   ├── AuditableInterceptor.cs
 │   │   │   │   ├── SoftDeleteInterceptor.cs
-│   │   │   │   └── DomainEventInterceptor.cs
-│   │   │   ├── Migrations/
-│   │   │   └── UnitOfWork.cs
-│   │   ├── Caching/HybridCacheService.cs
-│   │   ├── Messaging/                      # Outbox pattern
-│   │   ├── Integrations/                   # Clientes HTTP com Polly
-│   │   ├── Identity/JwtTokenService.cs
+│   │   │   │   ├── DomainEventInterceptor.cs   # Grava o outbox na mesma transação
+│   │   │   │   └── InterceptorRegistration.cs  # A ordem, com o motivo escrito
+│   │   │   ├── Outbox/                     # Despachante (ADR 0006)
+│   │   │   │   ├── OutboxMessage.cs
+│   │   │   │   ├── OutboxProcessor.cs      # Reserva, publica, registra
+│   │   │   │   ├── OutboxWorker.cs         # Só o laço
+│   │   │   │   ├── OutboxEventTypes.cs     # Mapa tipo → nome curto
+│   │   │   │   └── LoggingOutboxPublisher.cs   # Troque por um broker real
+│   │   │   ├── Seed/                       # Flags --migrate e --seed
+│   │   │   └── Migrations/
+│   │   ├── Configuration/                  # Options validadas no startup
+│   │   ├── Http/ExchangeRateClient.cs      # Cliente com retry e circuit breaker
+│   │   ├── Services/                       # Clock, cache, correlation id
 │   │   └── DependencyInjection.cs
 │   │
 │   └── CleanStart.Api/                     # Entrada HTTP. Fina.
-│       ├── Modules/OrderModule.cs          # Carter: endpoints agrupados
-│       ├── Middleware/
-│       │   ├── ExceptionHandlingMiddleware.cs
+│       ├── Modules/
+│       │   ├── OrderModule.cs              # Carter: endpoints agrupados
+│       │   └── DevTokenModule.cs           # Token de exemplo, só em Development
+│       ├── Middlewares/
 │       │   ├── CorrelationIdMiddleware.cs
-│       │   └── RequestLoggingMiddleware.cs
-│       ├── Extensions/                     # ServiceCollection + WebApplication
+│       │   ├── ExceptionHandlingMiddleware.cs
+│       │   ├── RequestLoggingMiddleware.cs
+│       │   └── SecurityHeadersMiddleware.cs
+│       ├── Security/JwtTokenService.cs     # Emissor de exemplo
+│       ├── Services/                       # ICurrentUser e correlation id do HTTP
+│       ├── Extensions/ResultExtensions.cs  # Result → HTTP, num lugar só
+│       ├── DependencyInjection.cs
 │       ├── Program.cs
 │       └── appsettings.json
 │
@@ -164,24 +191,22 @@ CleanStart/
 │   ├── CleanStart.Application.UnitTests/
 │   ├── CleanStart.Infrastructure.IntegrationTests/
 │   ├── CleanStart.Api.FunctionalTests/
-│   └── CleanStart.ArchitectureTests/        # NetArchTest
+│   ├── CleanStart.ArchitectureTests/         # NetArchTest
+│   └── load/smoke.js                         # k6
 │
 ├── docs/
-│   ├── adr/                                 # Architecture Decision Records
-│   │   ├── 0001-clean-architecture.md
-│   │   ├── 0002-mediator-em-vez-de-mediatr.md
-│   │   ├── 0003-mapperly-em-vez-de-automapper.md
-│   │   ├── 0004-result-em-vez-de-exception.md
-│   │   ├── 0005-vertical-slices-na-application.md
-│   │   ├── 0006-outbox-para-eventos.md
-│   │   └── 0007-testcontainers-para-integracao.md
-│   ├── getting-started.md
-│   └── adding-a-feature.md                  # Passo a passo da primeira feature
+│   ├── adr/                                  # 10 ADRs — ver docs/adr/README.md
+│   ├── getting-started.md                    # Do clone ao primeiro request
+│   └── adding-a-feature.md                   # Um caso de uso, do domínio ao endpoint
 │
-├── .github/workflows/ci.yml
-├── docker-compose.yml
-├── Directory.Build.props                    # Nullable, warnings as errors, analyzers
-├── Directory.Packages.props                 # Central Package Management
+├── .github/workflows/ci.yml                  # Build, testes e imagem, em jobs separados
+├── Dockerfile                                # Multi-stage, usuário sem privilégio
+├── docker-compose.yml                        # API, Postgres, Redis, Seq e Jaeger
+├── Directory.Build.props                     # Nullable, warnings as errors, analyzers
+├── Directory.Packages.props                  # Central Package Management
+├── global.json                               # Fixa o SDK e liga o runner MTP
+├── .editorconfig                             # Severidade de build, não sugestão
+├── .gitattributes                            # Fim de linha por tipo de arquivo
 └── CleanStart.slnx                           # Formato XML (.slnx), na raiz
 ```
 
@@ -216,39 +241,43 @@ Essas regras **não são convenção** — são testes em `CleanStart.Architectu
 
 ```csharp
 [Fact]
-public void Domain_NaoDeveDependerDeNenhumaOutraCamada()
+public void Domain_NaoDependeDeNenhumaOutraCamada()
 {
     // NetArchTest inspeciona o assembly compilado e valida a direção da dependência.
-    var resultado = Types.InAssembly(DomainAssembly)
-        .ShouldNot()
-        .HaveDependencyOnAny("CleanStart.Application", "CleanStart.Infrastructure", "CleanStart.Api")
+    ArchTestResult resultado = Types.InAssembly(Domain)
+        .Should()
+        .NotHaveDependencyOnAny(NamespaceApplication, NamespaceInfrastructure, NamespaceApi)
         .GetResult();
 
-    // A mensagem lista o tipo exato que violou — quem quebrou sabe onde corrigir.
-    resultado.IsSuccessful.Should().BeTrue(
-        $"tipos violando: {string.Join(", ", resultado.FailingTypeNames ?? [])}");
+    // A asserção própria lista o tipo exato que violou — quem quebrou sabe onde corrigir.
+    resultado.Should().NaoTerViolacao(
+        "o Domain é o centro da arquitetura: tudo aponta para ele, ele não aponta para nada");
 }
 
 [Fact]
-public void Handlers_DevemSerSelados()
+public void Handlers_SaoSealed()
 {
-    // Handler não é ponto de extensão. Herança aqui é quase sempre acoplamento acidental.
-    Types.InAssembly(ApplicationAssembly)
-        .That().ImplementInterface(typeof(IRequestHandler<,>))
-        .Should().BeSealed()
-        .GetResult().IsSuccessful.Should().BeTrue();
-}
+    // Reflexão direta, e não NetArchTest: a pergunta é sobre o MEMBRO, e a API do NetArchTest opera
+    // sobre tipos. Forçá-la aqui renderia um predicado menos legível que o foreach explícito.
+    List<Type> handlers = [.. Application.GetTypes().Where(EhHandler)];
 
-[Fact]
-public void Entidades_NaoDevemExporSetterPublico()
-{
-    // Estado do agregado muda por método de domínio, nunca por atribuição externa.
-    Types.InAssembly(DomainAssembly)
-        .That().Inherit(typeof(Entity))
-        .Should().MeetCustomRule(new NaoTerSetterPublicoRule())
-        .GetResult().IsSuccessful.Should().BeTrue();
+    // Guarda contra vacuidade: sem isto, a regra passaria sem inspecionar nada no dia em que o filtro
+    // parasse de encontrar handlers — e continuaria verde se o primeiro violador nascesse.
+    handlers.Should().NotBeEmpty("o teste precisa de handlers para inspecionar");
+
+    List<string> violacoes = [.. handlers
+        .Where(handler => !handler.IsSealed)
+        .Select(handler => handler.FullName ?? handler.Name)];
+
+    violacoes.Should().BeEmpty(
+        "handler é ponto final de orquestração, não ponto de extensão. Tipos violadores: "
+        + string.Join(", ", violacoes));
 }
 ```
+
+São **dez regras** no total: cinco de dependência entre camadas, duas sobre como o domínio é escrito (setter
+público, coleção mutável) e três de mensageria (handler `sealed`, mensagem `record`, e nada referenciando o
+Mediator fora dos marcadores).
 
 ---
 
@@ -268,18 +297,18 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public CustomerId CustomerId { get; private set; }
     public OrderStatus Status { get; private set; }
-    public Money Total { get; private set; }
-    public DateTime PlacedAt { get; private set; }
+    public string Currency { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
 
     // Construtor sem parâmetros só para o EF Core materializar. Privado.
     private Order() { }
 
-    private Order(OrderId id, CustomerId customerId, DateTime placedAt) : base(id)
+    private Order(OrderId id, CustomerId customerId, string currency, DateTimeOffset createdAt) : base(id)
     {
         CustomerId = customerId;
-        PlacedAt = placedAt;
+        Currency = currency;
         Status = OrderStatus.Pending;
-        Total = Money.Zero("BRL");
+        CreatedAt = createdAt;
     }
 
     /// <summary>
@@ -310,14 +339,22 @@ public sealed class Order : AggregateRoot<OrderId>
         return Result.Success(order);
     }
 
-    public Result Cancel(DateTime now)
+    public Result Cancel(DateTimeOffset agora)
     {
         // A regra de transição de estado vive na entidade, não no handler.
-        if (Status is OrderStatus.Shipped or OrderStatus.Delivered)
-            return Result.Failure(DomainErrors.Order.CancelamentoNaoPermitido(Status));
+        if (Status is OrderStatus.Shipped or OrderStatus.Cancelled)
+        {
+            return Result.Failure(DomainErrors.Order.TransicaoInvalida(Status, OrderStatus.Cancelled));
+        }
+
+        OrderStatus anterior = Status;
 
         Status = OrderStatus.Cancelled;
-        RaiseDomainEvent(new OrderCancelledEvent(Id, now));
+        UpdatedAt = agora;
+
+        // O evento carrega o estado anterior: quem reage precisa saber de onde veio.
+        RaiseDomainEvent(new OrderCancelledEvent(Id, anterior, agora));
+
         return Result.Success();
     }
 
@@ -346,28 +383,31 @@ public sealed class PlaceOrderHandler(
     ICustomerRepository customers,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)                       // tempo injetado = teste determinístico
-    : ICommandHandler<PlaceOrderCommand, Result<PlaceOrderResponse>>
+    // O marcador próprio já embute Result no retorno — ver ADR 0009.
+    : ICommandHandler<PlaceOrderCommand, PlaceOrderResponse>
 {
     public async ValueTask<Result<PlaceOrderResponse>> Handle(
         PlaceOrderCommand command, CancellationToken ct)
     {
         // 1. Carrega o que precisa pela abstração. Nenhum EF Core aqui.
-        var customer = await customers.GetByIdAsync(new CustomerId(command.CustomerId), ct);
+        Customer? customer = await customers.GetByIdAsync(new CustomerId(command.CustomerId), ct);
+
         if (customer is null)
-            return Result.Failure<PlaceOrderResponse>(DomainErrors.Customer.NaoEncontrado);
+            return Result.Failure<PlaceOrderResponse>(DomainErrors.Customer.NaoEncontrado(command.CustomerId));
 
         // 2. Delega a decisão de negócio para o domínio. O handler orquestra, não decide.
-        var resultado = Order.Place(
+        Result<Order> resultado = Order.Place(
             customer.Id,
-            command.Items.Select(i => (new ProductId(i.ProductId), i.Quantity, Money.Of(i.UnitPrice, "BRL"))),
+            command.Items.Select(i =>
+                (new ProductId(i.ProductId), i.Quantity, Money.Of(i.UnitPrice, command.Currency).Value)),
             clock.UtcNow);
 
         if (resultado.IsFailure)
             return Result.Failure<PlaceOrderResponse>(resultado.Error);
 
-        // 3. Persiste. O commit dispara os interceptors (auditoria, outbox de eventos).
+        // 3. Rastreia. Quem grava é o TransactionBehavior, quando o comando termina em sucesso — e o
+        //    SaveChanges dispara os interceptors: auditoria, soft delete e o outbox de eventos.
         orders.Add(resultado.Value);
-        await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Success(OrderMapper.ToResponse(resultado.Value));  // Mapperly, gerado
     }
@@ -405,7 +445,14 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
 }
 ```
 
-Behaviors incluídos: validação, logging com correlation id, transação (só para commands), e cache (só para queries marcadas com `ICacheable`).
+Behaviors incluídos, na ordem em que envolvem a mensagem: **logging** com correlation id, **validação**,
+**transação** (só para commands, gravando quando o comando termina em sucesso) e **invalidação de cache** (para
+commands que declaram quais chaves tornaram obsoletas).
+
+> Não há behavior de *leitura* de cache, e é decisão registrada: o `Result` não atravessa serialização — o
+> `System.Text.Json` exige que cada parâmetro do construtor case com uma propriedade do próprio tipo, e
+> `IsSuccess` e `Error` vivem na classe base. O cache de consulta vive no **reader**, guardando o DTO, que é
+> dado e serializa sem cerimônia.
 
 ### Infrastructure
 
@@ -440,7 +487,14 @@ public sealed class SoftDeleteInterceptor(IDateTimeProvider clock, ICurrentUser 
 
 Complementado por um global query filter no `DbContext`, para que registros deletados sumam de toda consulta sem ninguém precisar lembrar do `Where`.
 
-O `DomainEventInterceptor` coleta os eventos das entidades **depois** do `SaveChanges` bem-sucedido e grava na tabela de outbox — eventos e dados commitam na mesma transação, e um worker publica depois. É o que evita o clássico "salvou no banco mas o evento se perdeu".
+O `DomainEventInterceptor` coleta os eventos das entidades **durante** o `SaveChanges`, **antes do commit**, e os
+grava na tabela de outbox. Isso não é detalhe: como o `INSERT` do evento entra na mesma unidade de trabalho do
+dado, ou os dois acontecem ou nenhum. Em `SavedChanges` seria tarde — a transação já teria fechado, e voltaria a
+existir a janela em que o dado é gravado e o evento se perde.
+
+Um worker separado relê a tabela e publica. É o que evita o clássico "salvou no banco mas o evento se perdeu" —
+e o [ADR 0006](docs/adr/0006-outbox-para-eventos.md) detalha o resto: reserva concorrente com
+`FOR UPDATE SKIP LOCKED`, retry com recuo, dead-letter e por que a publicação **não** passa pelo Mediator.
 
 ### Api
 
@@ -451,25 +505,42 @@ public sealed class OrderModule : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/orders")
-            .WithTags("Orders")
+        RouteGroupBuilder grupo = app
+            .MapGroup("/api/v1/orders")
+            .WithTags("Pedidos")
+
+            // Exigido uma vez no grupo: endpoint novo nasce protegido, sem ninguém precisar lembrar.
             .RequireAuthorization();
 
-        group.MapPost("/", async (PlaceOrderRequest request, ISender sender, CancellationToken ct) =>
-        {
-            var resultado = await sender.Send(request.ToCommand(), ct);
+        grupo.MapPost("/", CriarPedido)
+            .WithName("CriarPedido")
+            .Produces<PlaceOrderResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+    }
 
-            // Result → HTTP acontece num único lugar. Nada de if/else espalhado por endpoint.
-            return resultado.Match(
-                onSuccess: r => Results.Created($"/api/v1/orders/{r.Id}", r),
-                onFailure: Results.Problem);
-        })
-        .WithName("PlaceOrder")
-        .Produces<PlaceOrderResponse>(StatusCodes.Status201Created)
-        .ProducesProblem(StatusCodes.Status400BadRequest);
+    private static async Task<IResult> CriarPedido(
+        [FromBody] CriarPedidoRequest request,
+        ISender sender,
+        ICorrelationIdProvider correlationId,
+        CancellationToken cancellationToken)
+    {
+        PlaceOrderCommand comando = new(request.CustomerId, request.Currency, /* itens */ []);
+
+        Result<PlaceOrderResponse> resultado = await sender.Send(comando, cancellationToken);
+
+        // Result → HTTP acontece num lugar só. Nada de if/else de status espalhado por endpoint.
+        return resultado.ParaCreated(
+            localizacao: pedido => $"/api/v1/orders/{pedido.Id}",
+            correlationId: correlationId.CorrelationId);
     }
 }
 ```
+
+> **O request é um tipo próprio da Api, não o command.** São contratos com ciclos de vida diferentes: renomear
+> um campo do command é refatoração interna; renomear um campo do request é *breaking change* para quem consome.
+> Juntá-los faz toda mudança interna virar risco externo.
 
 ---
 
@@ -484,29 +555,40 @@ O repositório vem com um domínio de pedidos implementado inteiro, não com um 
 
 Cada uma cobre um padrão diferente. Juntas, dão o vocabulário para implementar qualquer coisa parecida.
 
+| Endpoint | O que exercita |
+|---|---|
+| `POST /api/v1/orders` | Validação no pipeline, invariantes no agregado, evento no outbox |
+| `GET /api/v1/orders` | Paginação por cursor, filtro por status e período |
+| `GET /api/v1/orders/{id}` | Projeção direta para DTO, cache no reader |
+| `POST /api/v1/orders/{id}/cancel` | Transição de estado, invalidação de cache, 204 sem corpo |
+| `POST /api/v1/dev/token` | Emissor de exemplo — **só em `Development`** |
+| `GET /health/live` · `GET /health/ready` | Abertos, por design — o orquestrador não se autentica |
+
+Os quatro primeiros **exigem token**. `POST /{id}/cancel` e não `DELETE /{id}` porque cancelar não remove nada:
+muda a situação de um registro que continua existindo, e pedido é histórico.
+
 ---
 
 ## Decisões técnicas
 
-Todas estão em `docs/adr/`, no formato: contexto → decisão → consequências. As principais:
+São **dez ADRs** em [`docs/adr/`](docs/adr/), no formato contexto → decisão → consequências. Eles respondem a
+pergunta que o código não responde: **por que não do outro jeito?**
 
-**1. Result em vez de exception para erro de negócio.** Exception é para o inesperado. "Pedido sem itens" não é inesperado, é um caminho previsto. `Result<T>` torna o erro parte da assinatura do método — o compilador lembra você de tratá-lo. Exceptions continuam existindo para falha real de infraestrutura, capturadas no middleware e traduzidas em `ProblemDetails` (RFC 9457).
+Nenhum deles lista só benefícios. Uma decisão sem custo declarado é propaganda, não registro — e quem vier
+depois merece saber o preço antes de pagá-lo.
 
-**2. Mediator em vez de MediatR.** Source generator resolve os handlers em tempo de compilação. Menos reflection, startup mais rápido, e a licença não é um risco para produto comercial.
-
-**3. Mapperly em vez de AutoMapper.** Mapeamento gerado como código C# legível. Se você renomear uma propriedade, o build quebra — em vez de o campo chegar nulo em produção.
-
-**4. Vertical slices dentro da Clean Architecture.** Organizar a Application por feature (`Orders/PlaceOrder/`) em vez de por tipo técnico (`Commands/`, `Handlers/`, `Validators/`). Alta coesão: a pasta que você abre é a pasta inteira que muda.
-
-**5. Outbox para eventos de domínio.** Evento e dado na mesma transação. Publicação assíncrona por worker, com retry.
-
-**6. Testcontainers para testes de integração.** Postgres e Redis reais, subindo em container, descartados no fim. Sem banco compartilhado, sem `InMemory` provider mentindo sobre o comportamento do SQL.
-
-**7. Identidade tipada e value objects.** `OrderId`, `Money`, `Email`, `Document`. Elimina uma classe inteira de bug — passar o id errado no lugar certo compila quando tudo é `Guid`.
-
-**8. AwesomeAssertions em vez de FluentAssertions.** Fork Apache-2.0 da v7, API idêntica. A v8 da FluentAssertions passou a exigir licença paga para uso comercial — o mesmo critério que baniu MediatR e AutoMapper. O custo: fork acompanha o upstream com atraso.
-
-**9. Abstrações próprias sobre o Mediator.** Handlers implementam `ICommandHandler<,>` nosso, não a interface do pacote. O motivo é datado: o estável do Mediator é `net8.0` e o 3.1 alinhado ao .NET 10 ainda está em RC. Com a abstração, a troca é de uma camada. O custo: uma indireção que só se paga no dia da migração.
+| # | Decisão | Em uma linha |
+|---|---|---|
+| [0001](docs/adr/0001-clean-architecture.md) | Clean Architecture | Dependências apontam para dentro, e teste de arquitetura verifica |
+| [0002](docs/adr/0002-mediator-em-vez-de-mediatr.md) | Mediator em vez de MediatR | Licença é critério de bloqueio |
+| [0003](docs/adr/0003-mapperly-em-vez-de-automapper.md) | Mapperly em vez de AutoMapper | Mapeamento errado vira erro de build |
+| [0004](docs/adr/0004-result-em-vez-de-exception.md) | `Result` em vez de exception | Erro de negócio não é falha de sistema |
+| [0005](docs/adr/0005-vertical-slices-na-application.md) | Vertical slices | Uma pasta por caso de uso, não por papel técnico |
+| [0006](docs/adr/0006-outbox-para-eventos.md) | Outbox para eventos | Gravar e publicar são dois sistemas |
+| [0007](docs/adr/0007-testcontainers-para-integracao.md) | Testcontainers | Banco de verdade; o InMemory aprova o que o Postgres reprova |
+| [0008](docs/adr/0008-awesomeassertions-em-vez-de-fluentassertions.md) | AwesomeAssertions | Mesmo critério de licença, com o custo de ser um fork |
+| [0009](docs/adr/0009-abstracoes-proprias-sobre-o-mediator.md) | Abstrações sobre o Mediator | Seis linhas para que migrar seja mudança de um arquivo |
+| [0010](docs/adr/0010-identidade-tipada-e-value-objects.md) | Identidade tipada e value objects | Trocar argumento deixa de compilar |
 
 ---
 
@@ -523,19 +605,24 @@ Cinco projetos, cada um com um propósito distinto e um custo de execução dife
 | `ArchitectureTests` | Regras de camada, convenções de nomenclatura, selagem | nenhuma | ms |
 
 ```csharp
-// Teste de domínio: sem mock, sem setup, sem banco. Só a regra.
+// Teste de domínio: sem dublê, sem setup, sem banco. Só a regra.
 [Fact]
-public void Cancel_DevehFalhar_QuandoPedidoJaFoiEnviado()
+public void Cancel_ComPedidoEnviado_Falha()
 {
-    var pedido = OrderFactory.Enviado();          // builder do projeto de testes
+    Order pedido = PedidoNovo();
+    pedido.Pay(Agora);
+    pedido.Ship(Agora);
 
-    var resultado = pedido.Cancel(DateTime.UtcNow);
+    Result resultado = pedido.Cancel(Agora);
 
     resultado.IsFailure.Should().BeTrue();
-    resultado.Error.Code.Should().Be("Order.CancelamentoNaoPermitido");
-    pedido.Status.Should().Be(OrderStatus.Shipped);   // estado preservado
+    resultado.Error.Code.Should().Be("Order.TransicaoInvalida");
+    pedido.Status.Should().Be(OrderStatus.Shipped, "a falha não pode ter mudado o estado");
 }
 ```
+
+> O tempo entra por parâmetro (`Agora` é uma constante do teste), nunca `DateTime.UtcNow`. É o que torna o
+> resultado determinístico — e é a razão de `IDateTimeProvider` existir na Application.
 
 ```csharp
 // Teste de integração: Postgres real via Testcontainers, isolado por teste.
@@ -565,19 +652,33 @@ Não há meta de cobertura percentual no kit. A régua é diferente: **toda regr
 Cada camada registra o que é seu, em um método de extensão próprio. `Program.cs` só compõe:
 
 ```csharp
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services
-    .AddApplication()        // Mediator, behaviors, validators, mappers
-    .AddInfrastructure(builder.Configuration)   // DbContext, repos, cache, HTTP clients
-    .AddApiServices(builder.Configuration);     // Carter, auth, OpenAPI, health checks, CORS
+builder.Services.AddApplication();                      // Mediator, behaviors, validators
+builder.Services.AddInfrastructure(builder.Configuration);  // DbContext, repos, cache, outbox, HTTP
+builder.Services.AddApiServices(builder.Configuration);     // Carter, auth, rate limiting, OpenAPI, health
 
-var app = builder.Build();
-app.UseApiPipeline();        // ordem do middleware definida num lugar só
-app.Run();
+WebApplication app = builder.Build();
+
+// --migrate e --seed descrevem uma tarefa, não um modo de servir: executam e encerram.
+if (await StartupTasks.ExecutarAsync(app.Services, args)) return;
+
+// O pipeline é montado aqui, com o porquê de cada posição escrito ao lado.
+app.UseMiddleware<CorrelationIdMiddleware>();
+// ...
 ```
 
-Tempo de vida: `Scoped` para tudo que toca a requisição (DbContext, repositórios, `ICurrentUser`), `Singleton` para stateless puro (`IDateTimeProvider`, mappers), `Transient` para handlers. A configuração usa o padrão Options com validação no startup — configuração errada derruba a aplicação na inicialização, não na primeira chamada em produção:
+> **`var` não aparece aí por acaso.** O `.editorconfig` exige tipo explícito quando ele não está aparente no
+> lado direito, com severidade de **erro de build** — `var builder = WebApplication.CreateBuilder(args)` não
+> compila neste repositório. A razão: o público-alvo lê o código sem IDE para passar o mouse em cima.
+
+**A ordem de `AddApiServices` por último importa:** ela sobrescreve `ICurrentUser` e `ICorrelationIdProvider`
+pelas implementações que leem o `HttpContext`. No contêiner da Microsoft, o último registro vence — e é assim
+que a Infrastructure mantém padrões que funcionam fora de HTTP (worker, seed) sem conhecer a Api.
+
+Tempo de vida: `Scoped` para tudo que toca a requisição (DbContext, repositórios, `ICurrentUser`), `Singleton`
+para stateless puro (`IDateTimeProvider`). A configuração usa o padrão Options com validação no startup —
+configuração errada derruba a aplicação na inicialização, não na primeira chamada em produção:
 
 ```csharp
 services.AddOptions<DatabaseOptions>()
@@ -590,32 +691,59 @@ services.AddOptions<DatabaseOptions>()
 
 ## Observabilidade
 
-- **Serilog** com enrichers de correlation id, usuário e tenant; saída JSON em produção.
-- **OpenTelemetry** instrumentando ASP.NET Core, HttpClient, EF Core e Npgsql; exportador OTLP.
-- **Health checks** em `/health/live` e `/health/ready`, com verificação de Postgres e Redis no readiness.
-- Compose sobe **Seq** (logs) e **Jaeger** (traces) para você ver o resultado sem configurar nada.
+- **Serilog** em JSON, com o **correlation id** em toda linha e em toda resposta de erro. O middleware o aceita
+  do cabeçalho `X-Correlation-Id` ou gera um — é o que liga "deu erro às 14h" à requisição exata.
+- **OpenTelemetry** com exportador OTLP, instrumentando quatro coisas que juntas cobrem as perguntas das três da
+  manhã: **ASP.NET Core** (quanto demorou a requisição), **Npgsql** (quanto disso foi o banco, e em qual
+  comando), **HttpClient** (quanto foi esperando um serviço externo) e **runtime** (houve pausa de GC ou fome
+  de thread pool).
+- **Health checks** separados: `/health/live` diz "o processo está de pé" e não consulta dependência;
+  `/health/ready` checa Postgres e Redis. Apontar os dois para o mesmo lugar transforma banco fora do ar em
+  reinício em massa de pods.
+- O compose sobe **Seq** (logs, em `localhost:5341`) e **Jaeger** (traces, em `localhost:16686`), e a API já
+  envia para os dois — sem configurar nada.
+
+> O rastreamento do banco vem do **Npgsql**, não de um instrumentador de EF Core: o pacote de EF Core só existe
+> em beta, e quem executa o comando é o Npgsql de qualquer forma. O que se perde é a correspondência entre o
+> LINQ escrito e o SQL gerado, que o log do EF já mostra.
 
 ---
 
 ## Segurança
 
-- Autenticação JWT com validação de issuer, audience, lifetime e chave; suporte a JWKS para provedores externos.
-- Autorização baseada em policy, não em role espalhada por atributo.
-- Rate limiting nativo do ASP.NET Core, por endpoint.
-- Security headers (HSTS, CSP, X-Content-Type-Options) via middleware.
-- Toda entrada validada no pipeline, antes do handler.
-- Consultas sempre parametrizadas pelo EF Core; não há SQL concatenado no kit.
-- Segredos por variável de ambiente / User Secrets — `appsettings.json` não contém credencial.
-- Resposta de erro nunca vaza stack trace em produção; o `ProblemDetails` carrega o correlation id para você achar o log correspondente.
+**Os endpoints de pedido exigem autenticação.** Sem token, a resposta é 401 — inclusive na leitura.
+
+- **JWT** com os quatro parâmetros de validação ligados explicitamente: issuer, audience, lifetime e assinatura.
+  Cada um cobre um ataque diferente, e estão escritos no código mesmo sendo o padrão, porque num kit o leitor
+  precisa ver que a decisão foi tomada e não herdada.
+- **`ClockSkew` de 30 segundos.** O padrão da biblioteca é de **cinco minutos** — tempo em que um token expirado
+  continua sendo aceito.
+- **Autorização aplicada no grupo de rotas**, não endpoint a endpoint: quem acrescentar um endpoint amanhã o
+  recebe protegido sem precisar lembrar.
+- **Rate limiting** nativo, **particionado por usuário** (ou por IP, antes do login) — um cliente abusivo não
+  consome a cota dos outros. Responde 429 com `Retry-After`.
+- **Security headers** em toda resposta, inclusive nas de erro: `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy` e `Content-Security-Policy`.
+- **Segredos fora do repositório**: User Secrets em desenvolvimento, variável de ambiente ou cofre em produção.
+  A aplicação **recusa subir** com configuração ausente ou chave JWT curta demais.
+- **Erro nunca vaza stack trace em produção**; o `ProblemDetails` (RFC 9457) carrega o correlation id.
+
+> **A emissão de token é um exemplo.** `POST /api/v1/dev/token` existe **apenas em `Development`** — em produção
+> a rota não é protegida, é **ausente**, que é a única garantia que não depende de configuração correta. Para
+> ligar um provedor real (Entra ID, Keycloak, Auth0), troque `IssuerSigningKey` por `options.Authority` e apague
+> o `JwtTokenService`: as chaves passam a vir do JWKS do provedor.
 
 ---
 
 ## Performance
 
 - Source generators no lugar de reflection (Mediator, Mapperly, `System.Text.Json`).
-- `AsNoTracking` por padrão nas queries de leitura, projeção direta para DTO.
+- **Leitura separada da escrita:** o repositório devolve o agregado rastreado, porque quem escreve precisa das
+  invariantes; a consulta projeta direto para DTO, sem rastreamento. É o que dá sentido prático ao CQRS aqui.
 - Paginação por keyset nas listagens — não degrada com offset alto.
-- `HybridCache` com L1 em memória e L2 no Redis, invalidação por tag.
+- `HybridCache` com L1 em memória e L2 no Redis. A invalidação é **por chave**, e quem a dispara é o comando que
+  altera o dado: `CancelOrderCommand` declara a chave que torna obsoleta. Sem isso, o cliente veria "Pending"
+  por até cinco minutos depois de cancelar — sem erro nenhum.
 - Resiliência com Polly nas chamadas externas: timeout, retry com jitter, circuit breaker.
 - Script k6 de smoke em `tests/load/` para você medir antes de afirmar.
 
@@ -623,31 +751,53 @@ services.AddOptions<DatabaseOptions>()
 
 ## Como rodar
 
-Pré-requisitos: .NET 10 SDK e Docker.
+Pré-requisitos: **.NET 10 SDK** e **Docker** — este último também para rodar os testes, porque cerca de 37% da
+suíte sobe containers de verdade.
 
 ```bash
 git clone https://github.com/<seu-usuario>/CleanStart.git
 cd CleanStart
 
 # Sobe API, Postgres, Redis, Seq e Jaeger
-docker compose up -d
+docker compose up -d --build
 
-# Aplica migrations e popula dados de exemplo
-dotnet run --project src/CleanStart.Api -- --migrate --seed
+# Aplica as migrations e popula dados de exemplo. Executa a tarefa e encerra — não sobe a API.
+docker compose run --rm api dotnet CleanStart.Api.dll --migrate --seed
 ```
 
 | Serviço | URL |
 |---|---|
-| API + Scalar (OpenAPI) | http://localhost:8080/scalar |
+| API | http://localhost:8080 |
+| Documentação interativa (Scalar) | http://localhost:8080/scalar/v1 |
 | Seq (logs) | http://localhost:5341 |
 | Jaeger (traces) | http://localhost:16686 |
+
+**Os endpoints de pedido exigem token.** Em desenvolvimento há um emissor de exemplo:
+
+```bash
+# 1. Peça um token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/dev/token \
+  -H "Content-Type: application/json" -d '{"nome":"eu"}' \
+  | grep -oE '"token":"[^"]+' | cut -d'"' -f4)
+
+# 2. Use-o
+curl -s http://localhost:8080/api/v1/orders -H "Authorization: Bearer $TOKEN"
+```
+
+Criar um pedido, cancelar, e o passo a passo completo estão em
+**[docs/getting-started.md](docs/getting-started.md)** — inclusive o caminho alternativo, com a API rodando na
+máquina e só as dependências em container.
 
 Testes:
 
 ```bash
-dotnet test                                             # tudo
-dotnet test tests/CleanStart.ArchitectureTests          # só as regras de arquitetura
+dotnet test                                                     # tudo (303 testes, 5 níveis)
+dotnet test tests/CleanStart.ArchitectureTests/CleanStart.ArchitectureTests.csproj   # só as regras
 ```
+
+> Os testes **não** dependem do `docker-compose`: eles sobem os próprios containers e os derrubam ao final. Um
+> clone novo roda `dotnet test` sem subir nada antes. Se todos os testes de integração falharem, o Docker não
+> está rodando — é a primeira coisa a verificar.
 
 ---
 
@@ -666,7 +816,8 @@ dotnet test tests/CleanStart.ArchitectureTests          # só as regras de arqui
 - [ ] Multi-tenancy opcional (discriminador + Row-Level Security no Postgres)
 - [ ] Template `dotnet new` para eliminar o rename manual
 - [ ] Variante com MongoDB na Infrastructure, mostrando que a troca não toca Domain nem Application
-- [ ] Exemplo de integração com mensageria externa (MassTransit + RabbitMQ)
+- [ ] Exemplo de integração com mensageria externa (MassTransit + RabbitMQ) — o ponto de extensão já existe e
+      está nomeado: `IOutboxPublisher`, hoje com uma implementação que só registra no log
 - [ ] Pipeline de deploy para Azure Container Apps
 - [ ] Versão do kit em Minimal API pura, sem Carter, para comparação
 

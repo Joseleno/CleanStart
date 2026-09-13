@@ -176,7 +176,7 @@ public sealed class PersistenciaTests(PostgresFixture fixture) : IClassFixture<P
         // Quem precisar filtrar outbox por conteúdo em produção usa os operadores de jsonb (`->>`, `@>`), não
         // comparação de texto.
         List<OutboxMessage> doTipo = await leitura.OutboxMessages
-            .Where(m => m.Type == "CleanStart.Domain.Orders.Events.OrderPlacedEvent")
+            .Where(m => m.Type == "order-placed")
             .ToListAsync(ct);
 
         List<OutboxMessage> mensagens = [.. doTipo

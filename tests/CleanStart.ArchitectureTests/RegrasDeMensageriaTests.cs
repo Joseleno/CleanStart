@@ -2,6 +2,7 @@ using System.CodeDom.Compiler;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CleanStart.Application.Common.Messaging;
+using CleanStart.Domain.Common;
 
 namespace CleanStart.ArchitectureTests;
 
@@ -166,7 +167,31 @@ public sealed class RegrasDeMensageriaTests
 
     private static bool EhHandler(Type tipo) =>
         tipo is { IsClass: true, IsAbstract: false }
-        && tipo.GetInterfaces().Any(EhInterfaceDeHandlerPropria);
+        && !EhGeradoPorFerramenta(tipo)
+        && (tipo.GetInterfaces().Any(EhInterfaceDeHandlerPropria) || EhReacaoAEvento(tipo));
+
+    /// <summary>
+    /// Reação a domain event — reconhecida por assinatura, não por interface.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Quem reage a evento no outbox não implementa marcador nenhum: o despacho não passa pelo Mediator
+    /// (decisão 22), então não há <c>INotificationHandler</c> para varrer. Sem esta cláusula, a regra do
+    /// <c>sealed</c> simplesmente não alcançaria essa família de tipos — ficaria verde sem inspecionar nada,
+    /// que é exatamente o modo de falha que a decisão 17 existe para evitar.
+    /// </para>
+    /// <para>
+    /// O critério é o formato: um método <c>HandleAsync</c> cujo primeiro parâmetro é um
+    /// <c>IDomainEvent</c>. Reconhecer pela assinatura em vez de pelo nome da classe evita que renomear o tipo
+    /// tire-o da vigilância sem que ninguém perceba.
+    /// </para>
+    /// </remarks>
+    private static bool EhReacaoAEvento(Type tipo) =>
+        tipo.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(metodo => metodo.Name == "HandleAsync")
+            .Select(metodo => metodo.GetParameters())
+            .Any(parametros =>
+                parametros.Length > 0 && typeof(IDomainEvent).IsAssignableFrom(parametros[0].ParameterType));
 
     private static bool EhInterfaceDeHandlerPropria(Type interfaceImplementada)
     {

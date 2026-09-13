@@ -6,6 +6,7 @@ using CleanStart.Infrastructure.Configuration;
 using CleanStart.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace CleanStart.Infrastructure.IntegrationTests;
@@ -54,6 +55,8 @@ public sealed class DependencyInjectionTests
     [InlineData(typeof(IDateTimeProvider))]
     [InlineData(typeof(ICorrelationIdProvider))]
     [InlineData(typeof(ICurrentUser))]
+    [InlineData(typeof(IOutboxPublisher))]
+    [InlineData(typeof(IExchangeRateClient))]
     public void TodasAsAbstracoesDaApplication_SaoResolviveis(Type servico)
     {
         // Se a Application declara uma interface que ninguém registrou, o erro aparece aqui — não na primeira
@@ -154,5 +157,72 @@ public sealed class DependencyInjectionTests
 
         cache.Should().NotBeNull();
         provider.GetRequiredService<IOptions<RedisOptions>>().Value.Enabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void LoteDoOutboxForaDaFaixa_FalhaAoValidar()
+    {
+        IConfiguration configuracao = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:ConnectionString"] = "Host=localhost;Database=x;Username=u;Password=p",
+                ["Outbox:BatchSize"] = "0",
+            })
+            .Build();
+
+        using ServiceProvider provider = Construir(configuracao);
+
+        // Lote zero não é configuração exótica: é o valor que faz o despachante rodar em laço sem nunca pegar
+        // trabalho — sem erro, sem log, e com a fila crescendo. Falhar ao subir é o que torna isso visível.
+        Action validar = () => _ = provider.GetRequiredService<IOptions<OutboxOptions>>().Value;
+
+        validar.Should().Throw<OptionsValidationException>()
+            .WithMessage("*lote*");
+    }
+
+    [Fact]
+    public void OutboxSemConfiguracao_UsaOsPadroes()
+    {
+        // A seção inteira é opcional: quem não a declara recebe um despachante ligado e com valores sensatos.
+        // O contrário — exigir a seção — faria o kit não subir de primeira, que é justamente o que ele promete.
+        using ServiceProvider provider = Construir(ConfiguracaoValida());
+
+        OutboxOptions outbox = provider.GetRequiredService<IOptions<OutboxOptions>>().Value;
+
+        outbox.Enabled.Should().BeTrue("um outbox que ninguém despacha acumula eventos em silêncio");
+        outbox.BatchSize.Should().Be(20);
+        outbox.MaxAttempts.Should().Be(5);
+    }
+
+    [Fact]
+    public void OutboxHabilitado_RegistraODespachante()
+    {
+        using ServiceProvider provider = Construir(ConfiguracaoValida());
+
+        provider.GetServices<IHostedService>().Should().ContainSingle(
+            servico => servico.GetType().Name == "OutboxWorker",
+            "com o outbox ligado, alguém precisa despachar as mensagens");
+    }
+
+    [Fact]
+    public void OutboxDesligado_NaoRegistraODespachante()
+    {
+        IConfiguration configuracao = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:ConnectionString"] = "Host=localhost;Database=x;Username=u;Password=p",
+                ["Outbox:Enabled"] = "false",
+            })
+            .Build();
+
+        using ServiceProvider provider = Construir(configuracao);
+
+        // É o que permite subir uma instância só-API, e é o que impede o despachante de competir com os testes
+        // funcionais pela mesma tabela. O processor continua registrado: desligar o laço não tira a capacidade
+        // de despachar à mão.
+        provider.GetServices<IHostedService>().Should().BeEmpty();
+
+        using IServiceScope escopo = provider.CreateScope();
+        escopo.ServiceProvider.GetService<IOutboxPublisher>().Should().NotBeNull();
     }
 }

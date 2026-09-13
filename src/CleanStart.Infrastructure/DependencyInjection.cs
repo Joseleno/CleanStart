@@ -1,15 +1,21 @@
 using CleanStart.Application.Common.Abstractions;
 using CleanStart.Application.Orders.GetOrderById;
 using CleanStart.Application.Orders.ListOrders;
+using CleanStart.Application.Orders.NotifyOrderPlaced;
 using CleanStart.Domain.Customers;
 using CleanStart.Domain.Orders;
 using CleanStart.Infrastructure.Configuration;
+using CleanStart.Infrastructure.Http;
 using CleanStart.Infrastructure.Persistence;
 using CleanStart.Infrastructure.Persistence.Interceptors;
+using CleanStart.Infrastructure.Persistence.Outbox;
 using CleanStart.Infrastructure.Persistence.Repositories;
+using CleanStart.Infrastructure.Persistence.Seed;
 using CleanStart.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -39,7 +45,9 @@ public static class DependencyInjection
             .AddOptionsValidadas(configuration)
             .AddPersistencia()
             .AddCache(configuration)
-            .AddServicos();
+            .AddServicos()
+            .AddOutbox(configuration)
+            .AddClientesHttp(configuration);
 
         return services;
     }
@@ -68,6 +76,16 @@ public static class DependencyInjection
 
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<OutboxOptions>()
+            .Bind(configuration.GetSection(OutboxOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<HttpResilienceOptions>()
+            .Bind(configuration.GetSection(HttpResilienceOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -159,6 +177,115 @@ public static class DependencyInjection
         // Padrão sem usuário. A Api registra por cima a implementação que lê o HttpContext (Fase 4); job e
         // seed continuam com esta, gravando autoria nula.
         services.AddScoped<ICurrentUser, NoCurrentUser>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registra o despachante do outbox e o destino para onde ele publica.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// O publisher e o processor são Scoped como o <c>AppDbContext</c> de que dependem; o worker é singleton, por
+    /// ser um <c>BackgroundService</c>, e por isso cria um escopo próprio a cada ciclo.
+    /// </para>
+    /// <para>
+    /// <b>Só o worker é condicional.</b> O processor continua registrado mesmo com o despachante desligado —
+    /// quem o desligou pode querer chamá-lo à mão, de um comando ou de um teste. O que a flag decide é se
+    /// alguém o chama sozinho, de tempos em tempos.
+    /// </para>
+    /// </remarks>
+    private static IServiceCollection AddOutbox(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Troque esta linha pela sua implementação para ligar um broker de verdade; nada mais muda.
+        services.AddScoped<IOutboxPublisher, LoggingOutboxPublisher>();
+        services.AddScoped<OutboxProcessor>();
+
+        // Singleton porque a memória do que já foi notificado precisa atravessar os escopos — um por ciclo do
+        // despachante. Scoped faria cada ciclo esquecer tudo, e a proteção contra entrega repetida sumiria
+        // justamente no caso que ela existe para cobrir. Num sistema real esse estado é uma tabela, e aí o
+        // tempo de vida do serviço deixa de importar.
+        services.AddSingleton<OrderPlacedNotifier>();
+
+        // Dados de exemplo. Registrado sempre, executado só sob a flag --seed — ver StartupTasks.
+        services.AddScoped<DatabaseSeeder>();
+
+        // Lido direto da configuração, e não por IOptions: a decisão é sobre o que REGISTRAR, e acontece antes
+        // de existir um provider de onde resolver options.
+        bool habilitado = configuration
+            .GetSection(OutboxOptions.SectionName)
+            .GetValue("Enabled", defaultValue: true);
+
+        if (habilitado)
+        {
+            services.AddHostedService<OutboxWorker>();
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Clientes HTTP tipados, com retry, circuit breaker e timeout.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A ordem do pipeline é a que o <c>AddResilienceHandler</c> monta, e ela importa:</b> o timeout total
+    /// envolve tudo, o retry vem dentro dele, o circuit breaker dentro do retry, e o timeout por tentativa é o
+    /// mais interno. Assim cada tentativa tem prazo próprio, o conjunto tem prazo máximo, e o breaker conta
+    /// falhas de tentativas individuais — não do conjunto.
+    /// </para>
+    /// <para>
+    /// <b>⚠️ Retry só vale porque este cliente faz apenas <c>GET</c>.</b> É a decisão mais importante deste
+    /// método e a que não se pode copiar sem pensar: repetir uma consulta é inofensivo; repetir um <c>POST</c>
+    /// que cobra um cartão cobra duas vezes. Um cliente que escreve precisa de retry só em operação idempotente
+    /// — na prática, uma que carregue chave de idempotência — ou de retry nenhum.
+    /// </para>
+    /// <para>
+    /// <b>O <c>HttpClient.Timeout</c> fica desligado</b> (<c>InfiniteTimeSpan</c>) de propósito: ele é um
+    /// timeout do cliente inteiro e cancelaria a operação no meio do pipeline, disparando um cancelamento que se
+    /// confunde com o do usuário. Quem controla prazo aqui é a política, que sabe distinguir tentativa de
+    /// conjunto.
+    /// </para>
+    /// </remarks>
+    private static IServiceCollection AddClientesHttp(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        HttpResilienceOptions resiliencia = configuration
+            .GetSection(HttpResilienceOptions.SectionName)
+            .Get<HttpResilienceOptions>() ?? new HttpResilienceOptions();
+
+        services
+            .AddHttpClient<IExchangeRateClient, ExchangeRateClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.exemplo.invalid/");
+
+                // O prazo é da política, não do HttpClient — ver o comentário acima.
+                client.Timeout = Timeout.InfiniteTimeSpan;
+            })
+            .AddResilienceHandler("externo", pipeline =>
+            {
+                pipeline.AddTimeout(TimeSpan.FromSeconds(resiliencia.TotalTimeoutSeconds));
+
+                pipeline.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = resiliencia.MaxRetryAttempts,
+                    Delay = TimeSpan.FromSeconds(resiliencia.BaseDelaySeconds),
+                    BackoffType = DelayBackoffType.Exponential,
+
+                    // A variação aleatória evita que instâncias que falharam juntas retentem no mesmo instante,
+                    // martelando um serviço que está tentando voltar.
+                    UseJitter = true,
+                });
+
+                pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+                {
+                    FailureRatio = resiliencia.FailureRatio,
+                    BreakDuration = TimeSpan.FromSeconds(resiliencia.BreakDurationSeconds),
+                });
+
+                pipeline.AddTimeout(TimeSpan.FromSeconds(resiliencia.AttemptTimeoutSeconds));
+            });
 
         return services;
     }

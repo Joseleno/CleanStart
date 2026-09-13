@@ -160,6 +160,10 @@ namespace CleanStart.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -168,6 +172,10 @@ namespace CleanStart.Infrastructure.Persistence.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("text")
                         .HasColumnName("error");
+
+                    b.Property<DateTimeOffset>("NextAttemptOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_on");
 
                     b.Property<DateTimeOffset>("OccurredOn")
                         .HasColumnType("timestamp with time zone")
@@ -185,7 +193,7 @@ namespace CleanStart.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OccurredOn")
+                    b.HasIndex("NextAttemptOn", "OccurredOn")
                         .HasDatabaseName("ix_outbox_messages_pendentes")
                         .HasFilter("processed_on IS NULL");
 

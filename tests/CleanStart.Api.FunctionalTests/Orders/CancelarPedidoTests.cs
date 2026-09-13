@@ -57,7 +57,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
 
@@ -71,7 +71,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
         // continuaria devolvendo "Pending" por até cinco minutos — sem erro nenhum, o que é o pior tipo de bug.
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         // Lê antes, para popular o cache.
         HttpResponseMessage antes = await client.GetAsync($"/api/v1/orders/{pedidoId}", ct);
@@ -91,7 +91,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct, OrderStatus.Paid);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
 
@@ -104,7 +104,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
         // A transição proibida: a mercadoria já saiu, e o que existe daí em diante é devolução.
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct, OrderStatus.Shipped);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
 
@@ -119,7 +119,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage primeira = await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
         HttpResponseMessage segunda = await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
@@ -132,7 +132,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
     public async Task ComPedidoInexistente_Retorna404()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.PostAsync(
             $"/api/v1/orders/{Guid.CreateVersion7()}/cancel",
@@ -150,7 +150,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         await client.PostAsync($"/api/v1/orders/{pedidoId}/cancel", null, ct);
 
@@ -158,7 +158,7 @@ public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFi
         {
             List<string> conteudos = await Task.FromResult(
                 contexto.OutboxMessages
-                    .Where(m => m.Type == "CleanStart.Domain.Orders.Events.OrderCancelledEvent")
+                    .Where(m => m.Type == "order-cancelled")
                     .Select(m => m.Content)
                     .ToList());
 

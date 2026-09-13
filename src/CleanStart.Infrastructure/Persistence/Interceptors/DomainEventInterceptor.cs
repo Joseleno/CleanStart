@@ -81,11 +81,16 @@ internal sealed class DomainEventInterceptor : SaveChangesInterceptor
                 context.Set<OutboxMessage>().Add(new OutboxMessage
                 {
                     Id = Guid.CreateVersion7(),
-                    // O nome do tipo, não o assembly-qualified: amarrar a mensagem à versão do assembly que a
-                    // gravou quebraria o consumo depois de um rename ou de uma atualização.
-                    Type = evento.GetType().FullName ?? evento.GetType().Name,
+                    // O nome curto do mapa, não o nome do tipo: o identificador da mensagem não pode ser o nome
+                    // da classe em C#, senão renomear a classe quebra o que já está gravado. O porquê completo
+                    // está em OutboxEventTypes.
+                    Type = OutboxEventTypes.NomeDe(evento.GetType()),
                     Content = JsonSerializer.Serialize(evento, evento.GetType(), OpcoesDeSerializacao),
                     OccurredOn = evento.OccurredOn,
+                    // Já elegível: uma mensagem que nunca falhou não espera. Preencher aqui, em vez de deixar
+                    // nulo, é o que permite ao índice de pendentes dispensar NULLS FIRST — que a Fluent API não
+                    // expressa. O motivo completo está no XML doc de OutboxMessage.NextAttemptOn.
+                    NextAttemptOn = evento.OccurredOn,
                 });
             }
         }
