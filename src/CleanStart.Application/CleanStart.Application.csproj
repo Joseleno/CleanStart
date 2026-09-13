@@ -5,4 +5,21 @@
     <ProjectReference Include="..\CleanStart.Domain\CleanStart.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <!--
+    O source generator do Mediator entra com PrivateAssets="all": sem isso ele vaza como dependência
+    transitiva para quem consumir este assembly — erro que num kit de referência as pessoas copiam
+    (decisão 14 do HANDOFF).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" />
+    <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>
