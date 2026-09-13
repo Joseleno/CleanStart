@@ -20,3 +20,8 @@ dotnet_diagnostic.IDE0008.severity = none   # tipo explícito onde pediríamos `
 # Código gerado não leva documentação XML nem respeita nossa ordem de usings.
 dotnet_diagnostic.IDE0005.severity = none   # using desnecessário
 dotnet_diagnostic.SA1200.severity = none
+
+# Alocação de array literal nos argumentos do CreateIndex. São sugestões de desempenho para código chamado em
+# laço — migration roda uma vez, e o gerador não tem como escrever diferente.
+dotnet_diagnostic.CA1825.severity = none   # array de tamanho zero
+dotnet_diagnostic.CA1861.severity = none   # array constante como argumento

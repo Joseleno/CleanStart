@@ -68,8 +68,9 @@ public static class DependencyInjection
     /// consultar cache, e o domínio nem precisa vê-la.</item>
     /// <item><b>Transaction</b> depois da validação e antes do handler, para que a transação exista só quando a
     /// mensagem já é válida.</item>
-    /// <item><b>Caching</b> mais interno, colado no handler: é ele quem substitui a execução pelo valor
-    /// guardado, e só faz sentido quando tudo o mais já passou.</item>
+    /// <item><b>CacheInvalidation</b> logo dentro da transação: a invalidação precisa acontecer com o dado novo
+    /// já gravado. Mais externo que o commit, uma leitura concorrente repovoaria o cache com o valor antigo entre
+    /// a remoção e a gravação, e a janela ficaria aberta até o TTL expirar.</item>
     /// </list>
     /// <para>
     /// Errar a ordem não quebra o build nem faz teste falhar isoladamente — produz comportamento sutilmente
@@ -82,7 +83,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
-        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
+        services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 
         return services;
     }
