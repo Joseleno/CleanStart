@@ -37,6 +37,17 @@ if (await StartupTasks.ExecutarAsync(app.Services, args))
     return;
 }
 
+// Banco fora do ar é o erro mais provável de quem acabou de clonar o repositório, e a exceção do Npgsql não diz
+// o que fazer a respeito. A verificação troca "Failed to connect to 127.0.0.1:5432", repetido a cada requisição,
+// por uma instrução — e encerra, em vez de servir uma aplicação que vai falhar em tudo.
+//
+// Só em Development: em produção quem responde por dependência indisponível é o /health/ready, e recusar
+// arranque transformaria banco lento em pod que não sobe.
+if (app.Environment.IsDevelopment() && !await StartupTasks.BancoRespondeAsync(app.Services))
+{
+    return;
+}
+
 // ───────────────────────────── Pipeline ─────────────────────────────
 //
 // A ordem dos três primeiros middlewares não é arbitrária:
@@ -70,6 +81,14 @@ if (app.Environment.IsDevelopment())
     // entrega o mapa a quem estiver procurando. Quem precisa dele em produção o expõe atrás de autenticação.
     app.MapOpenApi();
     app.MapScalarApiReference();
+
+    // A raiz leva à documentação. Sem isto, abrir https://localhost:7206 no navegador — que é o que a IDE faz
+    // ao rodar — devolve 404, porque nenhuma rota responde em "/". O 404 está certo, mas quem acabou de clonar
+    // o kit lê aquilo como "não subiu", e não como "subiu, e a porta de entrada é outra".
+    //
+    // Só em Development, junto com o próprio Scalar: em produção "/" continua 404, que é o correto para uma API.
+    app.MapGet("/", () => Results.Redirect("/scalar/v1"))
+       .ExcludeFromDescription();
 }
 
 // live: o processo responde. Sem dependência externa — banco fora do ar não deve fazer o orquestrador reiniciar
