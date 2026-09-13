@@ -32,6 +32,25 @@ public sealed class OrderItem : Entity<Guid>
         UnitPrice = unitPrice;
     }
 
+    /// <summary>
+    /// Construtor de materialização, usado apenas pelo ORM.
+    /// </summary>
+    /// <remarks>
+    /// O EF Core precisa criar a instância antes de preencher um owned type (o <see cref="UnitPrice"/>), e
+    /// por isso não consegue usar o construtor acima — ele exige o <c>Money</c> pronto. É a única concessão
+    /// do domínio à persistência, e ela é privada: ninguém fora do ORM alcança este caminho, e nenhum atributo
+    /// de EF entra na classe.
+    /// <para>
+    /// Descoberto por teste que constrói o modelo do EF — o código compilava, e a falha só aparecia ao montar
+    /// o <c>IModel</c>.
+    /// </para>
+    /// </remarks>
+    private OrderItem()
+        : base(Guid.Empty)
+    {
+        UnitPrice = null!;
+    }
+
     /// <summary>Produto comprado.</summary>
     public ProductId ProductId { get; }
 
@@ -39,7 +58,11 @@ public sealed class OrderItem : Entity<Guid>
     public int Quantity { get; private set; }
 
     /// <summary>Preço unitário praticado no momento da compra.</summary>
-    public Money UnitPrice { get; }
+    /// <remarks>
+    /// O setter é privado porque o EF precisa atribuí-lo ao materializar o owned type. Privado, ele continua
+    /// imutável para todo o resto — e a regra de arquitetura que proíbe setter público segue valendo.
+    /// </remarks>
+    public Money UnitPrice { get; private set; }
 
     /// <summary>Preço unitário multiplicado pela quantidade.</summary>
     public Money Total => UnitPrice.Multiply(Quantity);

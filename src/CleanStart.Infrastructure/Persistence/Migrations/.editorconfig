@@ -1,0 +1,22 @@
+# Migrations são geradas pelo `dotnet ef`, não escritas à mão.
+#
+# O gerador escreve no estilo dele — namespace com chaves, `var` onde nossa regra pede tipo explícito — e não há
+# como configurá-lo. Sem este arquivo, `dotnet ef migrations add` produz código que não compila no nosso build,
+# e o "conserto" seria editar à mão um arquivo que a próxima migration recria igual.
+#
+# Relaxar aqui é a decisão certa porque estas regras governam a autoria do código, e ninguém é autor destes
+# arquivos. O mesmo critério já foi aplicado à regra de arquitetura que ignora o pipeline gerado pelo Mediator.
+#
+# O que NÃO é relaxado: nada de correção. Warnings de compilador e analyzers de qualidade continuam valendo —
+# migration que não compila ou que apaga coluna sem querer precisa falhar igual.
+
+[*.cs]
+
+# Estilo que o gerador não segue.
+dotnet_diagnostic.IDE0161.severity = none   # namespace com chaves em vez de file-scoped
+dotnet_diagnostic.IDE0007.severity = none   # `var` onde pediríamos tipo explícito
+dotnet_diagnostic.IDE0008.severity = none   # tipo explícito onde pediríamos `var`
+
+# Código gerado não leva documentação XML nem respeita nossa ordem de usings.
+dotnet_diagnostic.IDE0005.severity = none   # using desnecessário
+dotnet_diagnostic.SA1200.severity = none

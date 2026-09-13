@@ -6,4 +6,40 @@
     <ProjectReference Include="..\CleanStart.Application\CleanStart.Application.csproj" />
   </ItemGroup>
 
+  <!--
+    O EF Core vive aqui e só aqui. Há regra de arquitetura garantindo que ele não alcance o Domain nem a
+    Application: persistência é detalhe, e o domínio não sabe que existe banco.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- Configuração validada no startup, e o cache de dois níveis. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+  </ItemGroup>
+
+  <!--
+    Ferramenta de linha de comando (dotnet ef), com PrivateAssets: é usada para gerar migration em
+    desenvolvimento e não deve vazar como dependência para quem consumir este assembly.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    Os interceptors, os DbSet e a OutboxMessage são internal de propósito: ninguém fora desta camada deveria
+    alcançá-los. O projeto de teste é a exceção — ele precisa instanciar os interceptors para exercitá-los.
+    Tornar os tipos públicos para satisfazer o teste é o caminho errado: abriria para a Api também.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CleanStart.Infrastructure.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

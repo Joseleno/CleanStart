@@ -35,6 +35,10 @@ public static partial class OrderMapper
     [MapperIgnoreSource(nameof(Order.DomainEvents))]
     [MapperIgnoreSource(nameof(Order.UpdatedAt))]
     [MapperIgnoreSource(nameof(Order.Currency))]
+    // Autoria fica fora do response: quem criou o registro é dado interno de auditoria, e expô-lo num payload
+    // público revelaria identidades de usuário a quem só pediu o pedido.
+    [MapperIgnoreSource(nameof(Order.CreatedBy))]
+    [MapperIgnoreSource(nameof(Order.UpdatedBy))]
     public static partial PlaceOrderResponse ToResponse(Order order);
 
     [MapProperty(nameof(OrderItem.UnitPrice), nameof(PlaceOrderItemResponse.UnitPrice), Use = nameof(ToAmount))]
