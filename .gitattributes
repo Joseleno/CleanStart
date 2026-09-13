@@ -1,0 +1,41 @@
+# Fim de linha.
+#
+# O .editorconfig fixa `end_of_line = crlf` e o Directory.Build.props liga EnforceCodeStyleInBuild com
+# TreatWarningsAsErrors. Sem este arquivo, um clone em Linux ou macOS recebe LF, o analisador de estilo cobra
+# CRLF e **o build quebra no repositório de outra pessoa** — num kit de referência, é o pior lugar possível para
+# esse erro aparecer.
+#
+# Pendência aberta desde a T0.1, fechada na T6.4 porque a CI roda em ubuntu-latest e passaria a exercitar
+# exatamente esse caminho.
+
+# O git decide o que é texto e normaliza para LF no repositório.
+* text=auto
+
+# No disco, os arquivos que o .editorconfig governa saem com CRLF em qualquer sistema.
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf
+*.slnx text eol=crlf
+*.json text eol=crlf
+*.editorconfig text eol=crlf
+
+# LF obrigatório, independentemente do sistema: são lidos por ferramentas que não toleram CR.
+#
+# Um .sh com CRLF falha no Linux com "bad interpreter: no such file or directory" — mensagem que não diz nada
+# sobre a causa. O Dockerfile e os YAML do compose e da CI são lidos dentro de containers Linux.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# O script de carga roda no k6, que costuma ser executado em Linux ou dentro de container.
+*.js text eol=lf
+
+# Binários: nunca normalizar. O git corromperia o conteúdo tentando converter fim de linha.
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary

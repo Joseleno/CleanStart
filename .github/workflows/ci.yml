@@ -1,0 +1,121 @@
+# Integração contínua.
+#
+# Escrito à mão, e não a partir do template ".NET" que o GitHub oferece — ele tem três defeitos que quebrariam
+# este repositório, todos corrigidos aqui e marcados no lugar em que a correção aparece.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções antigas do mesmo branch: num push em sequência, só a última interessa, e as anteriores
+# gastariam minutos de runner para validar código que já foi substituído.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+
+  # Telemetria da CLI desligada: é uma chamada de rede por comando, sem utilidade em CI.
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ─────────────────────────── build ───────────────────────────
+  #
+  # DEFEITO 2 DO TEMPLATE, corrigido pela existência deste job separado: o template roda `dotnet test --no-build`
+  # num job só, e 20 dos testes sobem containers via Testcontainers. Um erro de compilação só apareceria depois
+  # de o runner ter baixado e iniciado Postgres e Redis. Aqui a compilação falha em segundos, sozinha.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # DEFEITO 1 DO TEMPLATE: ele fixa `dotnet-version: 8.0.x`, e o global.json deste repositório exige
+          # 10.0.401 — a CI falharia antes de compilar uma linha. Apontar para o arquivo elimina a duplicação:
+          # subir o SDK passa a ser uma edição só, no global.json.
+          global-json-file: global.json
+
+      # DEFEITO 3 DO TEMPLATE: sem cache de NuGet, toda execução rebaixa os mesmos pacotes. A chave inclui o
+      # hash dos arquivos de versão, então o cache é invalidado exatamente quando uma versão muda — e não antes.
+      - name: Cache de pacotes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restaurar
+        run: dotnet restore
+
+      # Sem `--warnaserror`: o Directory.Build.props já liga TreatWarningsAsErrors, então um aviso novo quebra
+      # aqui sem precisar de flag. Acrescentá-la sugeriria que a regra vale só na CI.
+      - name: Compilar
+        run: dotnet build --configuration Release --no-restore
+
+  # ──────────────────────────── testes ────────────────────────────
+  #
+  # Separado do build por causa do defeito 2. O runner ubuntu-latest tem Docker, que é o que os testes de
+  # integração e funcionais exigem — eles sobem Postgres e Redis de verdade.
+  test:
+    name: Testes
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache de pacotes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restaurar
+        run: dotnet restore
+
+      - name: Compilar
+        run: dotnet build --configuration Release --no-restore
+
+      # `--no-build` é seguro aqui porque o passo acima acabou de compilar nesta mesma máquina.
+      #
+      # Nota sobre o runner: o global.json liga o Microsoft.Testing.Platform, e é isso que faz `dotnet test`
+      # funcionar com xUnit v3 no SDK 10 — sem ele o comando falha, não degrada.
+      - name: Testar
+        run: dotnet test --configuration Release --no-build
+
+  # ────────────────────────── imagem Docker ──────────────────────────
+  #
+  # Constrói a imagem para provar que o Dockerfile funciona. Não publica em registry: o kit não pressupõe qual
+  # registry quem o usa tem, e publicar exigiria credencial que não existe aqui.
+  docker:
+    name: Imagem Docker
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir a imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+
+          # Cache de camadas entre execuções: sem ele, todo build refaz o restore do zero dentro do contêiner.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -41,7 +41,12 @@ public sealed class OrderModule : ICarterModule
         // /api/orders para /api/v1/orders quebra todo cliente existente.
         RouteGroupBuilder grupo = app
             .MapGroup("/api/v1/orders")
-            .WithTags("Pedidos");
+            .WithTags("Pedidos")
+
+            // Exigido uma vez no grupo, e não endpoint a endpoint: quem acrescentar um endpoint amanhã o recebe
+            // protegido sem precisar lembrar. O contrário — marcar um por um — falha em silêncio, porque o
+            // endpoint esquecido responde normalmente a quem não se autenticou.
+            .RequireAuthorization();
 
         grupo.MapPost("/", CriarPedido)
             .WithName("CriarPedido")

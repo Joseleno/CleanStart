@@ -1,0 +1,100 @@
+# Ambiente de desenvolvimento completo: a API, suas duas dependências e as duas ferramentas para enxergar o que
+# ela faz. `docker compose up` e a aplicação está no ar com logs e traces navegáveis.
+#
+# NÃO É PRODUÇÃO. As senhas estão em texto aberto porque são de um banco descartável em máquina local; a chave
+# JWT é fixa pelo mesmo motivo. Em produção, tudo isto vem do cofre do provedor.
+#
+# Nota: a suíte de testes NÃO depende deste arquivo. Os testes sobem os próprios containers via Testcontainers —
+# é o que permite rodar `dotnet test` num clone novo sem subir nada antes.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      # Os nomes dos serviços são resolvidos pelo DNS interno do compose — "postgres" e "redis" só existem nesta
+      # rede. Por isso a connection string daqui não vale fora dela.
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=cleanstart;Username=postgres;Password=postgres"
+      Redis__ConnectionString: "redis:6379"
+
+      # Chave de desenvolvimento. A aplicação recusa subir com menos de 32 caracteres (ValidateOnStart), e é
+      # deliberado: chave curta é aceita por umas bibliotecas e preenchida por outras — nos dois casos, a
+      # segurança que se acredita ter não existe.
+      Jwt__SigningKey: "chave-de-desenvolvimento-nao-use-em-producao"
+
+      # Traces e métricas vão para o Jaeger via OTLP.
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_SERVICE_NAME: "cleanstart-api"
+    depends_on:
+      # `service_healthy` e não apenas `service_started`: o contêiner do Postgres aceita conexão segundos depois
+      # de iniciar, e sem esperar o health check a API sobe, tenta migrar e falha antes de o banco responder.
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Sem curl nem wget na imagem do .NET (é enxuta, e é bom que seja). O próprio runtime faz a requisição.
+      test: ["CMD", "dotnet", "--info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cleanstart
+    ports:
+      # Exposto para que uma ferramenta de banco na máquina alcance o contêiner.
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cleanstart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Logs estruturados navegáveis. O Serilog escreve JSON no console; para enviá-los ao Seq, acrescente o sink
+  # Serilog.Sinks.Seq e aponte para http://seq:5341.
+  seq:
+    image: datalust/seq:latest
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+    volumes:
+      - seq-data:/data
+
+  # Traces. A interface fica em http://localhost:16686 — é onde se vê a requisição, os comandos SQL dentro dela
+  # e quanto tempo cada um levou.
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # interface
+      - "4317:4317"    # OTLP gRPC, que é o que a API usa
+
+volumes:
+  # Nomeados, e não montagem de pasta da máquina: o Postgres exige dono e permissões específicas do diretório de
+  # dados, e uma montagem de pasta no Windows ou no macOS falha ou fica lenta por causa disso.
+  postgres-data:
+  seq-data:

@@ -3,6 +3,7 @@ using CleanStart.Api;
 using CleanStart.Api.Middlewares;
 using CleanStart.Application;
 using CleanStart.Infrastructure;
+using CleanStart.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using Serilog;
@@ -26,6 +27,16 @@ builder.Services.AddApiServices(builder.Configuration);
 
 WebApplication app = builder.Build();
 
+// --migrate e --seed descrevem uma tarefa, não um modo de servir: se alguma delas foi pedida, a aplicação faz o
+// trabalho e encerra com código 0, que é o que um init container ou um passo de pipeline espera.
+//
+// Antes do pipeline de propósito — não há requisição para atender, e montar middlewares que ninguém vai
+// atravessar seria trabalho perdido.
+if (await StartupTasks.ExecutarAsync(app.Services, args))
+{
+    return;
+}
+
 // ───────────────────────────── Pipeline ─────────────────────────────
 //
 // A ordem dos três primeiros middlewares não é arbitrária:
@@ -39,6 +50,19 @@ WebApplication app = builder.Build();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
+
+// Cabeçalhos de segurança antes de qualquer resposta ser escrita — inclusive as de erro e as do limitador.
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Autenticação antes de autorização (a segunda precisa saber quem é), e as duas depois dos middlewares acima:
+// uma resposta 401 também precisa de correlation id e de cabeçalhos de segurança.
+app.UseAuthentication();
+app.UseAuthorization();
+
+// O limitador vem DEPOIS da autenticação, e é isso que permite particionar por usuário em vez de por IP: antes
+// de UseAuthentication, o HttpContext.User ainda está anônimo e todos os usuários atrás do mesmo NAT dividiriam
+// a mesma cota.
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {

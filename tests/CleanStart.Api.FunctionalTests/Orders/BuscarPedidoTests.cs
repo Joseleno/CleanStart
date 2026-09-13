@@ -44,7 +44,7 @@ public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixt
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearPedidoAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"/api/v1/orders/{pedidoId}", ct);
 
@@ -62,7 +62,7 @@ public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixt
     public async Task ComPedidoInexistente_Retorna404()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"/api/v1/orders/{Guid.CreateVersion7()}", ct);
 
@@ -77,7 +77,7 @@ public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixt
     {
         // A restrição `:guid` na rota rejeita antes de qualquer código rodar — o handler nem é chamado.
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync("/api/v1/orders/nao-e-um-guid", ct);
 
@@ -92,7 +92,7 @@ public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixt
         // no teste de unidade do CachingBehavior.
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid pedidoId = await SemearPedidoAsync(ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage primeira = await client.GetAsync($"/api/v1/orders/{pedidoId}", ct);
         HttpResponseMessage segunda = await client.GetAsync($"/api/v1/orders/{pedidoId}", ct);
@@ -112,7 +112,7 @@ public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixt
         // Fecha o ciclo: cria pelo POST e lê pelo caminho que a própria resposta indicou. É o que um cliente de
         // verdade faz, e o que prova que o Location aponta para algo que existe.
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         Guid clienteId = Guid.Empty;
 

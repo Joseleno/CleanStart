@@ -51,7 +51,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await SemearAsync(3, ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?tamanho=2", ct);
 
@@ -70,7 +70,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
         // cursor vir nulo. É a prova de que o contrato de paginação funciona ponta a ponta.
         CancellationToken ct = TestContext.Current.CancellationToken;
         Guid clienteId = await SemearAsync(5, ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HashSet<Guid> vistos = [];
         string? cursor = null;
@@ -111,7 +111,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await SemearAsync(2, ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         // Tamanho maior que o total: cabe tudo numa página, então não há próxima.
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?tamanho={ListOrdersLimite}", ct);
@@ -125,7 +125,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
     public async Task ComCursorMalformado_Retorna400()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?cursor=isto-nao-e-cursor", ct);
 
@@ -140,7 +140,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
     public async Task ComStatusInvalido_Retorna400DoBinding()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?status=NaoExiste", ct);
 
@@ -152,7 +152,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await SemearAsync(2, ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?status=Pending&tamanho=50", ct);
 
@@ -170,7 +170,7 @@ public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFix
         // Sem teto, um único parâmetro derruba a memória do servidor.
         CancellationToken ct = TestContext.Current.CancellationToken;
         await SemearAsync(3, ct);
-        using HttpClient client = factory.CreateClient();
+        using HttpClient client = factory.CreateClientAutenticado();
 
         HttpResponseMessage resposta = await client.GetAsync($"{Rota}?tamanho=100000", ct);
 

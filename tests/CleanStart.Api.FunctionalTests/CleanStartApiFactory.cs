@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using CleanStart.Api.Security;
 using CleanStart.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -69,6 +71,46 @@ public sealed class CleanStartApiFactory : WebApplicationFactory<Program>, IAsyn
         // A chave JWT é validada no startup (ValidateOnStart) — sem ela a aplicação nem sobe. É um valor de
         // teste, com o tamanho mínimo que a validação exige.
         builder.UseSetting("Jwt:SigningKey", new string('t', 32));
+
+        // O despachante do outbox fica desligado nos testes funcionais. Ele competiria com o teste pela mesma
+        // tabela: vários testes conferem a mensagem que o pedido gerou, e a limpeza de processadas antigas
+        // poderia apagá-la entre a requisição e a asserção — uma falha intermitente, dependente de tempo, que
+        // apareceria na CI e não aqui. Quem exercita o despachante é o teste de integração, que o chama
+        // diretamente. Note que isto continua sendo configuração, não troca de registro.
+        builder.UseSetting("Outbox:Enabled", "false");
+    }
+
+    /// <summary>
+    /// Cria um cliente HTTP com um token válido no cabeçalho <c>Authorization</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Emite um token de verdade, e não um handler de autenticação falso.</b> Substituir o esquema por um fake
+    /// faria os testes passarem sem nunca exercitar a validação real — issuer, audience, expiração e assinatura
+    /// ficariam sem cobertura, e um erro em qualquer um deles só apareceria em produção. O custo é uma linha a
+    /// mais aqui; o ganho é que o caminho autenticado do teste é o mesmo de quem usa a API.
+    /// </para>
+    /// <para>
+    /// Usa o próprio <c>JwtTokenService</c> da Api, com a chave que a factory já configura. Respeita a regra
+    /// desta classe: nada de registro de serviço substituído, só configuração.
+    /// </para>
+    /// </remarks>
+    /// <param name="usuarioId">
+    /// O usuário do token, ou nulo para gerar um. É este identificador que a auditoria grava em
+    /// <c>CreatedBy</c>, então um teste que confira autoria precisa informá-lo.
+    /// </param>
+    public HttpClient CreateClientAutenticado(Guid? usuarioId = null)
+    {
+        HttpClient cliente = CreateClient();
+
+        using IServiceScope escopo = Services.CreateScope();
+        JwtTokenService emissor = escopo.ServiceProvider.GetRequiredService<JwtTokenService>();
+
+        string token = emissor.Emitir(usuarioId ?? Guid.CreateVersion7(), "teste");
+
+        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return cliente;
     }
 
     /// <summary>
