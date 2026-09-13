@@ -51,6 +51,22 @@ internal sealed class ExceptionHandlingMiddleware(
                         grupo => grupo.Key,
                         grupo => grupo.Select(falha => falha.ErrorMessage).ToArray()));
         }
+        catch (BadHttpRequestException excecao)
+        {
+            // Corpo ausente, JSON malformado ou tipo incompatível: o binding do ASP.NET lança antes de o
+            // endpoint ser chamado, então a checagem de null dentro do handler nunca é alcançada.
+            //
+            // É **erro do cliente**, não do servidor: sem este catch, um `{` a mais no payload viraria 500 —
+            // dizendo a quem chamou que o problema é nosso, e poluindo o log de erro com requisição malformada.
+            await EscreverProblemDetails(
+                context,
+                correlationIdProvider.CorrelationId,
+                StatusCodes.Status400BadRequest,
+                "Requisição inválida",
+                environment.IsDevelopment()
+                    ? excecao.Message
+                    : "O corpo da requisição não pôde ser lido. Verifique se é um JSON válido.");
+        }
         catch (Exception excecao)
         {
             // Log com a exception inteira (fica no servidor); resposta sem detalhe (vai para o cliente).

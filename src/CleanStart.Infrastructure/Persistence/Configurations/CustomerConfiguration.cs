@@ -52,6 +52,22 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(customer => customer.UpdatedAt)
             .HasColumnName("updated_at");
 
+
+
+        // Autoria: sem este mapeamento o EF cai na convenção padrão e gera "CreatedBy"/"UpdatedBy" em PascalCase,
+
+
+        // fora do snake_case de todas as outras colunas. Foi o que aconteceu na primeira migration.
+
+
+        builder.Property(customer => customer.CreatedBy)
+            .HasColumnName("created_by");
+
+
+
+        builder.Property(customer => customer.UpdatedBy)
+            .HasColumnName("updated_by");
+
         builder.Property(customer => customer.IsDeleted)
             .HasColumnName("is_deleted")
             .HasDefaultValue(false)

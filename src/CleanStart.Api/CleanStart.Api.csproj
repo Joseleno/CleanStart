@@ -40,4 +40,13 @@
     <PackageReference Include="AspNetCore.HealthChecks.Redis" />
   </ItemGroup>
 
+  <!--
+    Com top-level statements, a classe Program gerada é internal — e o WebApplicationFactory<Program> dos testes
+    funcionais precisa alcançá-la. É a forma recomendada pela Microsoft, e melhor que declarar
+    `public partial class Program` só para satisfazer o teste: aqui a exceção fica visível e nomeada.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CleanStart.Api.FunctionalTests" />
+  </ItemGroup>
+
 </Project>

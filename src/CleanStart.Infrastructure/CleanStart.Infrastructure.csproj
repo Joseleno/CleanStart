@@ -40,6 +40,13 @@
   -->
   <ItemGroup>
     <InternalsVisibleTo Include="CleanStart.Infrastructure.IntegrationTests" />
+
+    <!--
+      Os testes funcionais também: eles semeiam dados e conferem o que foi persistido pelo DbContext, em vez de
+      por SQL cru — assim o teste depende do modelo, e um mapeamento errado quebra ali em vez de passar
+      despercebido. Continuam fechados para a Api e para qualquer consumidor externo.
+    -->
+    <InternalsVisibleTo Include="CleanStart.Api.FunctionalTests" />
   </ItemGroup>
 
 </Project>
