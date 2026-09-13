@@ -1,0 +1,18 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Dúvida sobre como usar o kit
+    url: https://github.com/Joseleno/CleanStart/discussions
+    about: >
+      Pergunta não é defeito. Discussions é o lugar — e a resposta fica pesquisável para quem tiver a mesma
+      dúvida depois.
+
+  - name: Por que a arquitetura é assim
+    url: https://github.com/Joseleno/CleanStart/tree/main/docs/adr
+    about: >
+      Os dez ADRs explicam cada decisão, o que foi descartado e o que a escolha custou. Se a resposta não
+      estiver lá, é um defeito da documentação — abra uma issue.
+
+  - name: Primeiros passos
+    url: https://github.com/Joseleno/CleanStart/blob/main/docs/getting-started.md
+    about: Do clone ao primeiro request, incluindo o que fazer quando algo não funciona.

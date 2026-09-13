@@ -1,0 +1,81 @@
+name: Proposta de mudança
+description: Sugerir uma funcionalidade, uma dependência nova ou uma mudança de arquitetura
+labels: ["proposta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Este é um kit de referência, não uma biblioteca.** O critério de aceitação não é "isto é útil?" —
+        é "isto torna o exemplo mais claro para quem lê?".
+
+        Uma funcionalidade genuinamente boa pode ser recusada por acrescentar peças que o leitor precisa
+        atravessar. É por isso que a proposta vem antes do código: ninguém quer descobrir isso depois de
+        implementar.
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema isto resolve
+      description: >
+        Comece pelo problema, não pela solução. O que hoje é difícil, confuso ou impossível?
+      placeholder: |
+        Quem usa o kit com um broker real precisa escrever X do zero, porque o exemplo só mostra Y.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposta
+    attributes:
+      label: O que você propõe
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: O que você considerou e descartou
+      description: >
+        E por quê. Esta seção costuma ser a mais valiosa da proposta — e frequentemente revela que a
+        alternativa descartada era melhor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: custo
+    attributes:
+      label: O que isto custa
+      description: >
+        Toda decisão custa alguma coisa: uma dependência a mais, um conceito novo para aprender, uma
+        indireção, mais código para manter. Os ADRs deste repositório sempre declaram o custo — uma proposta
+        que só lista benefícios é propaganda, não proposta.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: escopo
+    attributes:
+      label: O que isto toca
+      multiple: true
+      options:
+        - Domain
+        - Application
+        - Infrastructure
+        - Api
+        - Testes
+        - Documentação
+        - Infraestrutura de entrega (Docker, CI)
+        - Dependência nova
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: dependencia
+    attributes:
+      label: Se a proposta acrescenta uma dependência
+      description: >
+        Licença é critério de bloqueio neste repositório — o MediatR, o AutoMapper e o FluentAssertions estão
+        fora por isso.
+      options:
+        - label: A licença é permissiva (MIT, Apache-2.0 ou equivalente) e eu verifiquei no pacote
+        - label: A versão é estável — não é RC, beta nem preview
+        - label: Sei responder "o que quebra se não tiver isso?"

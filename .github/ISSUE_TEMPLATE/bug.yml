@@ -1,0 +1,74 @@
+name: Defeito
+description: Algo não funciona como o repositório descreve
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de abrir: se **todos** os testes de integração falharam, verifique se o Docker está rodando —
+        cerca de 37% da suíte sobe containers de verdade, e sem o daemon o sintoma parece defeito de código.
+
+  - type: textarea
+    id: o-que-acontece
+    attributes:
+      label: O que acontece
+      description: E o que você esperava que acontecesse.
+      placeholder: |
+        Ao rodar X, acontece Y. Eu esperava Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Como reproduzir
+      description: Os passos mínimos. Um defeito que não se reproduz não se conserta.
+      placeholder: |
+        1. `docker compose up -d`
+        2. `dotnet run -- --migrate`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: saida
+    attributes:
+      label: Mensagem de erro ou saída relevante
+      description: >
+        Cole o texto, não a captura de tela — texto é pesquisável. Se houver stack trace, inclua-o inteiro.
+        **Remova connection string, token e qualquer segredo antes de colar.**
+      render: text
+
+  - type: input
+    id: sdk
+    attributes:
+      label: Versão do SDK
+      description: "Saída de `dotnet --version`"
+      placeholder: "10.0.401"
+    validations:
+      required: true
+
+  - type: input
+    id: so
+    attributes:
+      label: Sistema operacional e Docker
+      placeholder: "Windows 11, Docker Desktop 29.7.2"
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit ou versão
+      description: "Saída de `git rev-parse --short HEAD`, ou a tag usada"
+      placeholder: "aba9b1e"
+
+  - type: checkboxes
+    id: verificacoes
+    attributes:
+      label: Antes de enviar
+      options:
+        - label: O Docker está rodando (se o defeito envolve testes ou banco)
+        - label: Rodei `dotnet build` e `dotnet test` e anexei a saída relevante
+        - label: Não há segredo no que colei acima
+          required: true
