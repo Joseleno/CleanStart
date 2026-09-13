@@ -54,6 +54,13 @@ public sealed class Customer : AggregateRoot<CustomerId>, IAuditable, ISoftDelet
     public DateTimeOffset? UpdatedAt { get; private set; }
 
     /// <inheritdoc />
+    /// <remarks>Preenchido pelo interceptor de auditoria, na Infrastructure — não pela regra de negócio.</remarks>
+    public Guid? CreatedBy { get; private set; }
+
+    /// <inheritdoc />
+    public Guid? UpdatedBy { get; private set; }
+
+    /// <inheritdoc />
     public bool IsDeleted { get; private set; }
 
     /// <inheritdoc />

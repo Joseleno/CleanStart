@@ -19,4 +19,14 @@ public interface IAuditable
 
     /// <summary>Quando foi alterada pela última vez, ou nulo se nunca foi.</summary>
     DateTimeOffset? UpdatedAt { get; }
+
+    /// <summary>Quem criou, ou nulo quando a operação não tem usuário.</summary>
+    /// <remarks>
+    /// Nulo é estado legítimo, não ausência de dado: job, seed e migração criam registro sem usuário. Forçar um
+    /// <c>Guid.Empty</c> ali produziria um id que se parece com um de verdade.
+    /// </remarks>
+    Guid? CreatedBy { get; }
+
+    /// <summary>Quem alterou pela última vez, ou nulo.</summary>
+    Guid? UpdatedBy { get; }
 }

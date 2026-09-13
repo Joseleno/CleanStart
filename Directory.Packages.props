@@ -18,19 +18,6 @@
   </PropertyGroup>
 
   <!--
-    Infraestrutura de teste.
-
-    xUnit v3 (pacote `xunit.v3`) não é o v2 com número maior: cada projeto de teste virou um
-    executável próprio rodando sobre Microsoft.Testing.Platform (MTP). Consequências, todas
-    verificadas rodando `dotnet test` no SDK 10.0.401:
-
-    - os projetos levam `OutputType=Exe`;
-    - nada de `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` ou `coverlet.collector` —
-      são do mundo VSTest, e no .NET 10 o VSTest deixou de rodar projeto MTP;
-    - o opt-in no MTP fica no `global.json` (seção `test.runner`), sem o qual `dotnet test` falha;
-    - cobertura vem de `Microsoft.Testing.Extensions.CodeCoverage`, o equivalente MTP do coverlet.
-  -->
-  <!--
     Application.
 
     Mediator (martinothamar) e não MediatR: o MediatR passou a exigir licença comercial. Fixado no 3.0.2,
@@ -60,6 +47,39 @@
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
   </ItemGroup>
 
+  <!--
+    Infrastructure.
+
+    EF Core e Npgsql ficam na linha 10.x: a 11.x é preview (decisão 4 do HANDOFF). Não subir sem verificar.
+  -->
+  <ItemGroup Label="Infrastructure">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
+
+    <!-- Options com validação por DataAnnotations, conferida no startup (ValidateOnStart). -->
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+
+    <!-- Segundo nível do HybridCache. Opcional: sem Redis configurado, o cache é só local. -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.12" />
+  </ItemGroup>
+
+  <!--
+    Infraestrutura de teste.
+
+    xUnit v3 (pacote `xunit.v3`) não é o v2 com número maior: cada projeto de teste virou um
+    executável próprio rodando sobre Microsoft.Testing.Platform (MTP). Consequências, todas
+    verificadas rodando `dotnet test` no SDK 10.0.401:
+
+    - os projetos levam `OutputType=Exe`;
+    - nada de `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` ou `coverlet.collector` —
+      são do mundo VSTest, e no .NET 10 o VSTest deixou de rodar projeto MTP;
+    - o opt-in no MTP fica no `global.json` (seção `test.runner`), sem o qual `dotnet test` falha;
+    - cobertura vem de `Microsoft.Testing.Extensions.CodeCoverage`, o equivalente MTP do coverlet.
+  -->
   <ItemGroup Label="Testes">
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
