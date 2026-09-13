@@ -14,7 +14,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Npgsql.OpenTelemetry" />
   </ItemGroup>
 
   <!-- Resiliência do cliente HTTP de exemplo (T6.3). -->

@@ -103,9 +103,10 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
 
     <!--
-      Rastreamento do banco. Vem do Npgsql, e não do OpenTelemetry.Instrumentation.EntityFrameworkCore: esse
-      último só existe em beta (1.18.0-beta.1), e o kit não fixa pacote instável. Não se perde nada relevante —
-      quem emite o SQL é o Npgsql, então é ele que tem o comando, a duração e o erro.
+      Rastreamento do banco, consumido pela Api junto das demais instrumentações. Vem do Npgsql, e não do
+      OpenTelemetry.Instrumentation.EntityFrameworkCore: esse último só existe em beta (1.18.0-beta.1), e o kit
+      não fixa pacote instável. Não se perde nada relevante — quem emite o SQL é o Npgsql, então é ele que tem
+      o comando, a duração e o erro.
     -->
     <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
 
