@@ -755,7 +755,7 @@ Pré-requisitos: **.NET 10 SDK** e **Docker** — este último também para roda
 suíte sobe containers de verdade.
 
 ```bash
-git clone https://github.com/<seu-usuario>/CleanStart.git
+git clone https://github.com/Joseleno/CleanStart.git
 cd CleanStart
 
 # Sobe API, Postgres, Redis, Seq e Jaeger
@@ -771,6 +771,20 @@ docker compose run --rm api dotnet CleanStart.Api.dll --migrate --seed
 | Documentação interativa (Scalar) | http://localhost:8080/scalar/v1 |
 | Seq (logs) | http://localhost:5341 |
 | Jaeger (traces) | http://localhost:16686 |
+
+> **Vai rodar a API na máquina, com F5 na IDE?** Então suba só as dependências (`docker compose up -d postgres
+> redis`) e **configure os três segredos antes** — connection strings e chave JWT não ficam em arquivo
+> versionado, e a aplicação **recusa subir** sem eles (`ValidateOnStart`), com erro de conexão no startup:
+>
+> ```bash
+> cd src/CleanStart.Api
+> dotnet user-secrets set "Database:ConnectionString" \
+>   "Host=localhost;Port=5432;Database=cleanstart;Username=postgres;Password=postgres"
+> dotnet user-secrets set "Redis:ConnectionString" "localhost:6379"
+> dotnet user-secrets set "Jwt:SigningKey" "uma-chave-de-desenvolvimento-com-32-caracteres"
+> ```
+>
+> O passo a passo completo é o **Caminho 2** em [docs/getting-started.md](docs/getting-started.md).
 
 **Os endpoints de pedido exigem token.** Em desenvolvimento há um emissor de exemplo:
 

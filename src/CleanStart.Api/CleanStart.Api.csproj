@@ -7,6 +7,22 @@
       lá, nunca em appsettings versionado.
     -->
     <UserSecretsId>33dd6ef1-53b5-4c63-8a7e-e208bc191ea3</UserSecretsId>
+
+    <!--
+      Copia para a saída TODO o grafo de dependências, e não apenas o que esta camada referencia diretamente.
+
+      Sem isto, um assembly que só é usado por reflexão ou por injeção de dependência pode não ser copiado: o
+      compilador não o vê em nenhum `using` da Api, conclui que é desnecessário e o deixa de fora. O build
+      passa; a aplicação quebra ao subir, com "Could not load file or assembly".
+
+      Foi o que aconteceu aqui com Microsoft.EntityFrameworkCore (usado por StartupTasks ao aplicar migrations)
+      e com Microsoft.Extensions.Caching.Hybrid (resolvido pela DI da Infrastructure) — os dois vinham da
+      Infrastructure por referência de projeto, e nenhum aparecia no código desta camada.
+
+      O custo é uma pasta de saída maior. Em troca, o que roda é o grafo inteiro, e a falha deixa de depender
+      de o compilador adivinhar o que a reflexão vai precisar.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <!--
@@ -19,6 +35,12 @@
   <ItemGroup>
     <ProjectReference Include="..\CleanStart.Application\CleanStart.Application.csproj" />
     <ProjectReference Include="..\CleanStart.Infrastructure\CleanStart.Infrastructure.csproj" />
+
+    <!--
+      O Domain explicitamente: os endpoints usam Result, DomainErrors e OrderStatus diretamente. Dependência
+      usada no código é dependência declarada — a transitiva compila até a cadeia mudar.
+    -->
+    <ProjectReference Include="..\CleanStart.Domain\CleanStart.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +48,7 @@
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.Seq" />

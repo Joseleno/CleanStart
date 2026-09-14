@@ -23,7 +23,8 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
 
         context.Response.OnStarting(static estado =>
         {
-            IHeaderDictionary cabecalhos = ((HttpContext)estado).Response.Headers;
+            var contexto = (HttpContext)estado;
+            IHeaderDictionary cabecalhos = contexto.Response.Headers;
 
             // Impede o navegador de adivinhar o tipo do conteúdo. Sem ele, uma resposta que o servidor diz ser
             // JSON pode ser interpretada como HTML — e um texto controlado pelo usuário vira script executado.
@@ -39,7 +40,16 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
 
             // A API não serve HTML: negar toda origem de conteúdo é o mais restritivo possível e não custa nada.
             // Uma aplicação com interface precisa de uma política de verdade, montada a partir do que ela carrega.
-            cabecalhos["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
+            //
+            // A exceção é a documentação interativa, que só existe em Development: o Scalar É uma página, montada
+            // por JavaScript, com estilo embutido e fontes próprias. Sob "default-src 'none'" o navegador recusa
+            // carregar os scripts dela e o que aparece é uma tela em branco — sem erro no servidor, porque o
+            // bloqueio acontece no cliente. A política abaixo libera o que essa página precisa, e só na rota dela.
+            cabecalhos["Content-Security-Policy"] = EhDocumentacaoInterativa(contexto)
+                ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                  "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; " +
+                  "font-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'"
+                : "default-src 'none'; frame-ancestors 'none'";
 
             // O cabeçalho do servidor diz qual servidor e qual versão estão rodando — informação que só serve a
             // quem procura uma vulnerabilidade conhecida.
@@ -49,5 +59,20 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
         }, context);
 
         return next(context);
+    }
+
+    /// <summary>
+    /// Diz se a requisição é da documentação interativa — a única resposta desta API que é uma página.
+    /// </summary>
+    /// <remarks>
+    /// O teste inclui o ambiente de propósito: em produção a documentação não é mapeada, e sem essa verificação
+    /// bastaria alguém pedir <c>/scalar/qualquer-coisa</c> para receber a política frouxa numa resposta 404.
+    /// </remarks>
+    private static bool EhDocumentacaoInterativa(HttpContext contexto)
+    {
+        IWebHostEnvironment ambiente = contexto.RequestServices.GetRequiredService<IWebHostEnvironment>();
+
+        return ambiente.IsDevelopment()
+            && contexto.Request.Path.StartsWithSegments("/scalar", StringComparison.OrdinalIgnoreCase);
     }
 }

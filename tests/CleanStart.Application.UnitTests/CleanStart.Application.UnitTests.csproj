@@ -3,6 +3,13 @@
   <!-- Testa handler com os repositórios substituídos por NSubstitute — sem banco, sem container. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\CleanStart.Application\CleanStart.Application.csproj" />
+
+    <!--
+      O Domain é referenciado explicitamente, e não só por vir junto da Application: os testes usam Order,
+      Money e DomainErrors diretamente. Dependência usada no código é dependência declarada — a transitiva
+      compila até a cadeia mudar, e aí o erro aparece longe da alteração que o causou.
+    -->
+    <ProjectReference Include="..\..\src\CleanStart.Domain\CleanStart.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

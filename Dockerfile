@@ -34,6 +34,20 @@ RUN dotnet publish src/CleanStart.Api/CleanStart.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# A biblioteca do Kerberos, que a imagem do runtime não traz. O Npgsql tenta carregá-la ao abrir conexão —
+# GSSAPI é um dos métodos de autenticação que ele oferece ao servidor — e, sem ela, imprime em texto cru
+# "Cannot load library libgssapi_krb5.so.2 / Error: ... No such file or directory" antes de cada conexão.
+#
+# A conexão funciona: não achando GSSAPI, o Npgsql segue com autenticação por senha. Mas a mensagem sai fora do
+# JSON estruturado do Serilog e com a palavra "Error", então é a primeira coisa que quem sobe o compose lê — e
+# parece falha. Custa 7 MB na imagem não fazer um kit de referência começar com um erro que não é erro.
+#
+# Antes do USER app porque o apt-get precisa de root; a troca de usuário vem logo em seguida.
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Usuário sem privilégios. A imagem do .NET já traz o `app` criado; usá-lo é o que impede que uma falha na
 # aplicação vire root dentro do contêiner — e, com uma montagem mal configurada, root fora dele.
 USER app

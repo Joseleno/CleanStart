@@ -2,6 +2,7 @@ using CleanStart.Infrastructure.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace CleanStart.Infrastructure.Persistence;
 
@@ -83,9 +84,99 @@ public static partial class StartupTasks
         return true;
     }
 
+    /// <summary>
+    /// Verifica se o banco responde e, se não responder, explica o que fazer.
+    /// </summary>
+    /// <remarks>
+    /// Sem isto, banco fora do ar não impede a aplicação de subir — ela sobe, e cada requisição falha com
+    /// <c>NpgsqlException: Failed to connect to 127.0.0.1:5432</c>, repetida a cada tentativa. A exceção está
+    /// correta e não diz o que resolve: em desenvolvimento, quase sempre, subir os contêineres.
+    /// <para>
+    /// <b>Só em desenvolvimento.</b> Em produção o banco pode demorar a aceitar conexão enquanto a aplicação já
+    /// subiu, e recusar arranque por isso transforma indisponibilidade momentânea em pod que não sobe — o
+    /// <c>/health/ready</c> é quem responde por essa pergunta lá. Aqui o objetivo é outro: encurtar o caminho
+    /// entre o erro e a causa para quem acabou de clonar o repositório.
+    /// </para>
+    /// </remarks>
+    /// <returns><c>true</c> se o banco respondeu.</returns>
+    public static async Task<bool> BancoRespondeAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        await using AsyncServiceScope escopo = services.CreateAsyncScope();
+
+        AppDbContext contexto = escopo.ServiceProvider.GetRequiredService<AppDbContext>();
+        ILogger logger = escopo.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(typeof(StartupTasks));
+
+        try
+        {
+            if (await contexto.Database.CanConnectAsync(cancellationToken))
+            {
+                return true;
+            }
+        }
+        catch (NpgsqlException)
+        {
+            // A exceção em si não acrescenta nada ao diagnóstico — o que importa é a instrução abaixo, e ela é
+            // a mesma nos dois casos (recusou conexão ou respondeu que não). Falha de configuração já teria
+            // derrubado o startup antes daqui, no ValidateOnStart.
+        }
+
+        // O endereço é montado fora da chamada de log de propósito: passá-lo como expressão faria o analisador
+        // apontar avaliação desnecessária caso o log estivesse desabilitado (CA1873).
+        System.Data.Common.DbConnection conexao = contexto.Database.GetDbConnection();
+        string servidor = $"{conexao.DataSource}/{conexao.Database}";
+
+        BancoNaoResponde(logger, servidor);
+
+        // E também no console, cru. O sink de Console está configurado com o formatador JSON compacto, que é o
+        // certo para log estruturado e péssimo para uma instrução de várias linhas: as quebras viram "\r\n"
+        // dentro de uma linha só. Como esta mensagem existe para ser lida por uma pessoa — e é a última coisa
+        // que ela vê antes de o processo encerrar —, vale escrevê-la duas vezes.
+        Console.Error.WriteLine($"""
+
+            ┌─ O banco de dados não respondeu em {servidor}
+            │
+            │  Em desenvolvimento, o que quase sempre resolve é subir as dependências:
+            │
+            │      docker compose up -d postgres redis
+            │
+            │  Se o banco já estiver no ar, confira a connection string:
+            │
+            │      dotnet user-secrets list --project src/CleanStart.Api
+            │
+            └─ O passo a passo está em docs/getting-started.md (Caminho 2).
+
+            """);
+
+        return false;
+    }
+
     [LoggerMessage(EventId = 5100, Level = LogLevel.Information, Message = "Aplicando migrations pendentes...")]
     private static partial void MigrandoBanco(ILogger logger);
 
     [LoggerMessage(EventId = 5101, Level = LogLevel.Information, Message = "Migrations aplicadas")]
     private static partial void MigracaoConcluida(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 5102,
+        Level = LogLevel.Critical,
+        Message = """
+                  O banco de dados não respondeu em {Servidor}.
+
+                  Em desenvolvimento, o que quase sempre resolve é subir as dependências:
+
+                      docker compose up -d postgres redis
+
+                  Se o banco já estiver no ar, confira a connection string em user secrets:
+
+                      dotnet user-secrets list --project src/CleanStart.Api
+
+                  O passo a passo está em docs/getting-started.md (Caminho 2).
+                  """)]
+    private static partial void BancoNaoResponde(ILogger logger, string servidor);
 }

@@ -55,7 +55,7 @@ O `--seed` grava dez clientes e cinco pedidos de exemplo, para haver o que consu
 docker compose up -d postgres redis
 ```
 
-**Configure os segredos** — a connection string e a chave JWT **não** ficam em arquivo versionado:
+**Configure os segredos** — as connection strings e a chave JWT **não** ficam em arquivo versionado:
 
 ```bash
 cd src/CleanStart.Api
@@ -63,8 +63,15 @@ cd src/CleanStart.Api
 dotnet user-secrets set "Database:ConnectionString" \
   "Host=localhost;Port=5432;Database=cleanstart;Username=postgres;Password=postgres"
 
+dotnet user-secrets set "Redis:ConnectionString" "localhost:6379"
+
 dotnet user-secrets set "Jwt:SigningKey" "uma-chave-de-desenvolvimento-com-32-caracteres"
 ```
+
+> O Redis é opcional: sem ele o `HybridCache` usa só memória local e a aplicação sobe igual — o que muda é o
+> cache não ser compartilhado entre instâncias. Vale configurar mesmo assim, porque a omissão é silenciosa: o
+> health check do Redis só é registrado quando há connection string, então `/health/ready` responde `Healthy`
+> sem que o segundo nível de cache exista.
 
 > A chave precisa de **pelo menos 32 caracteres**. A aplicação recusa subir com menos, e é deliberado: chave
 > curta é preenchida por umas bibliotecas e rejeitada por outras — nos dois casos, a segurança que se acredita
@@ -88,9 +95,16 @@ A API fica em http://localhost:5131, e a documentação em http://localhost:5131
 Em desenvolvimento há um emissor de exemplo — ele **não existe fora de `Development`**, e não é protegido: é
 ausente, que é a única garantia que não depende de configuração correta.
 
+Os comandos abaixo servem aos dois caminhos. **Escolha o endereço do que você subiu:**
+
+```bash
+BASE_URL=http://localhost:8080    # Caminho 1 — tudo em container
+BASE_URL=http://localhost:5131    # Caminho 2 — a API na máquina
+```
+
 ```bash
 # 1. Peça um token
-curl -s -X POST http://localhost:8080/api/v1/dev/token \
+curl -s -X POST $BASE_URL/api/v1/dev/token \
   -H "Content-Type: application/json" \
   -d '{"nome":"eu"}'
 # → {"token":"eyJ...","usuarioId":"019..."}
@@ -98,14 +112,14 @@ curl -s -X POST http://localhost:8080/api/v1/dev/token \
 # 2. Use-o
 TOKEN="eyJ..."
 
-curl -s http://localhost:8080/api/v1/orders \
+curl -s $BASE_URL/api/v1/orders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Crie um pedido** (use um `customerId` que o seed gravou — pegue um da listagem acima):
 
 ```bash
-curl -i -X POST http://localhost:8080/api/v1/orders \
+curl -i -X POST $BASE_URL/api/v1/orders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
