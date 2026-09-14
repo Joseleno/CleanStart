@@ -2,6 +2,11 @@
 
 **Starter kit de arquitetura .NET 10 — Clean Architecture, DDD e CQRS prontos para produção.**
 
+[![CI](https://github.com/Joseleno/CleanStart/actions/workflows/ci.yml/badge.svg)](https://github.com/Joseleno/CleanStart/actions/workflows/ci.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Licença MIT](https://img.shields.io/badge/licença-MIT-blue)](LICENSE)
+[![Testes](https://img.shields.io/badge/testes-303-brightgreen)](#estratégia-de-testes)
+
 CleanStart não é um template vazio com quatro pastas e um `Program.cs`. É uma solução completa, executável, com uma feature de referência implementada de ponta a ponta, testes em cinco níveis, regras de arquitetura validadas automaticamente e as decisões técnicas documentadas em ADRs.
 
 A ideia é simples: você clona, roda `docker compose up`, prepara o banco com uma flag e tem uma API autenticada
