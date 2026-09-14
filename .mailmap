@@ -1,0 +1,14 @@
+# Unifica as identidades de autor do histórico.
+#
+# O repositório foi escrito por uma pessoa só, mas o `git log` mostrava três autores: duas grafias do nome e
+# dois e-mails, resultado de commits feitos em máquinas e pela interface do GitHub em momentos diferentes.
+#
+# Este arquivo resolve isso **sem reescrever histórico**: o git passa a exibir a forma canônica em `log`,
+# `shortlog` e `blame`, e os commits originais continuam intactos. A alternativa — `git filter-repo` — mudaria
+# o hash de todo commit, quebrando as referências já publicadas (a tag v0.1.0, os merges das PRs #1 a #9) e
+# obrigando a refazer a varredura de segredo do checklist de publicação.
+#
+# Formato: <nome canônico> <e-mail canônico> <nome antigo> <e-mail antigo>
+
+Joseleno Dias Moreira dos Santos <joselenomoreira@gmail.com> <contatojoseleno@icloud.com>
+Joseleno Dias Moreira dos Santos <joselenomoreira@gmail.com> Joseleno <joselenomoreira@gmail.com>
