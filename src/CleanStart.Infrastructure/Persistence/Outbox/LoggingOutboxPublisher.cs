@@ -45,6 +45,14 @@ internal sealed partial class LoggingOutboxPublisher(
         {
             await notificador.HandleAsync(pedidoCriado, cancellationToken);
         }
+        else if (domainEvent is OrderCancelledEvent pedidoCancelado)
+        {
+            // Nada reage a cancelamento — e o ramo existe para dizer isso. Sem ele, o evento cairia fora do if
+            // e o despachante marcaria a mensagem como entregue: indistinguível, lendo o código, de um despacho
+            // esquecido. Num sistema real aqui entraria o estorno, e é por isso que o Cancel recusa cancelar
+            // duas vezes: quem reage estornaria em dobro.
+            SemReacaoRegistrada(logger, nameof(OrderCancelledEvent), pedidoCancelado.OrderId.Value);
+        }
     }
 
     [LoggerMessage(
@@ -52,4 +60,10 @@ internal sealed partial class LoggingOutboxPublisher(
         Level = LogLevel.Information,
         Message = "Outbox: {Evento} entregue (ocorrido em {OcorridoEm}) — publisher de exemplo, sem broker")]
     private static partial void PublicacaoSimulada(ILogger logger, string evento, DateTimeOffset ocorridoEm);
+
+    [LoggerMessage(
+        EventId = 2101,
+        Level = LogLevel.Debug,
+        Message = "Outbox: {Evento} do pedido {PedidoId} não tem reação registrada — descarte deliberado")]
+    private static partial void SemReacaoRegistrada(ILogger logger, string evento, Guid pedidoId);
 }
