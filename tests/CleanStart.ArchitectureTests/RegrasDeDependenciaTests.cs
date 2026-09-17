@@ -26,6 +26,34 @@ public sealed class RegrasDeDependenciaTests
     private const string NamespaceApi = "CleanStart.Api";
     private const string NamespaceEfCore = "Microsoft.EntityFrameworkCore";
 
+    /// <summary>
+    /// Famílias de biblioteca que o Domain não pode alcançar.
+    /// </summary>
+    /// <remarks>
+    /// A lista é por prefixo, então <c>Microsoft</c> cobre EF Core, <c>Microsoft.Extensions.*</c> e o resto.
+    /// Isso inclui abstrações aparentemente inofensivas como <c>ILogger</c> e <c>IOptions</c> — deliberado:
+    /// domínio que loga ou lê configuração deixou de ser domínio.
+    /// <para>
+    /// <b>Acrescente aqui</b> ao adotar uma biblioteca nova que não deva chegar ao Domain. É o custo de a
+    /// regra ser blocklist, e o motivo de a allowlist ser preferível — ver o comentário da regra.
+    /// </para>
+    /// </remarks>
+    private static readonly string[] NamespacesProibidosNoDomain =
+    [
+        "Microsoft",
+        "Npgsql",
+        "Dapper",
+        "Newtonsoft",
+        "StackExchange",
+        "FluentValidation",
+        "Mediator",
+        "Riok",
+        "Carter",
+        "Serilog",
+        "OpenTelemetry",
+        "Polly",
+    ];
+
     [Fact]
     public void Domain_NaoDependeDeNenhumaOutraCamada()
     {
@@ -38,16 +66,38 @@ public sealed class RegrasDeDependenciaTests
             "o Domain é o centro da arquitetura: tudo aponta para ele, ele não aponta para nada");
     }
 
+    /// <summary>
+    /// O Domain não alcança nenhuma biblioteca de infraestrutura.
+    /// </summary>
+    /// <remarks>
+    /// <b>Era uma blocklist de um item só</b> (<c>NotHaveDependencyOn(EfCore)</c>): Dapper, Newtonsoft ou o
+    /// pacote da vez entrariam no Domain sem que nada acusasse. A T9.2 previa inverter para allowlist, que é
+    /// a forma certa — o que não foi autorizado reprova por omissão, em vez de passar por omissão.
+    /// <para>
+    /// <b>A allowlist não é implementável com o NetArchTest 1.3.2, e isso foi verificado.</b> O
+    /// <c>OnlyHaveDependenciesOn</c> conta a closure que o compilador gera dentro da classe para cada lambda
+    /// de LINQ, e ela não pertence a namespace nenhum: nenhuma lista a alcança. O controle foi <c>Money</c>,
+    /// que passa com <c>["System", "CleanStart.Domain"]</c>, contra <c>Document</c> — que usa
+    /// <c>.Where()</c> e <c>.All()</c> — e reprova até com a lista estendida com <c>System.Linq</c>,
+    /// <c>System.Collections</c> e o blob do compilador.
+    /// </para>
+    /// <para>
+    /// O que ficou no lugar é a blocklist <b>ampliada</b>: em vez de um item, todas as famílias que na
+    /// prática alguém importaria por engano. Não cobre um pacote novo imprevisto, e essa é a diferença
+    /// honesta entre ela e a allowlist. Fica registrado como pendência no HANDOFF.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void Domain_NaoReferenciaEfCore()
+    public void Domain_NaoDependeDeBibliotecaDeInfraestrutura()
     {
         ArchTestResult resultado = Types.InAssembly(Domain)
             .Should()
-            .NotHaveDependencyOn(NamespaceEfCore)
+            .NotHaveDependencyOnAny(NamespacesProibidosNoDomain)
             .GetResult();
 
         resultado.Should().NaoTerViolacao(
-            "persistência é detalhe de infraestrutura; o domínio não sabe que existe banco de dados");
+            "o domínio é a camada que sobrevive à troca de qualquer biblioteca: se ele depende de uma delas, "
+            + "a próxima migração passa por dentro das regras de negócio");
     }
 
     [Fact]
