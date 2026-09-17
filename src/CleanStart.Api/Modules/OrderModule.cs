@@ -4,6 +4,7 @@ using CleanStart.Application.Common.Abstractions;
 using CleanStart.Application.Orders.CancelOrder;
 using CleanStart.Application.Orders.GetOrderById;
 using CleanStart.Application.Orders.ListOrders;
+using CleanStart.Application.Orders.PayOrder;
 using CleanStart.Application.Orders.PlaceOrder;
 using CleanStart.Domain.Common;
 using CleanStart.Domain.Orders;
@@ -76,6 +77,16 @@ public sealed class OrderModule : ICarterModule
             .Produces<OrderResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        grupo.MapPost("/{id:guid}/pay", PagarPedido)
+            .WithName("PagarPedido")
+            .WithSummary("Marca um pedido como pago")
+            .WithDescription(
+                "Confirma o pagamento de um pedido pendente. Só pedido pendente é pago — pagar um pedido já "
+                + "pago, enviado ou cancelado é conflito. Exige que o cliente do pedido ainda exista.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         grupo.MapPost("/{id:guid}/cancel", CancelarPedido)
             .WithName("CancelarPedido")
             .WithSummary("Cancela um pedido")
@@ -85,6 +96,26 @@ public sealed class OrderModule : ICarterModule
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/orders/{id}/pay</c>
+    /// </summary>
+    /// <remarks>
+    /// <c>POST</c> num sub-recurso nomeado pela ação, e não <c>PATCH</c> com <c>{"status":"Paid"}</c>: o cliente
+    /// não escolhe o estado seguinte, ele pede uma transição que o domínio aceita ou recusa. Expor o campo
+    /// convidaria a "corrigir" um pedido escrevendo o estado direto, que é exatamente o que a máquina de estados
+    /// existe para impedir.
+    /// </remarks>
+    private static async Task<IResult> PagarPedido(
+        Guid id,
+        ISender sender,
+        ICorrelationIdProvider correlationId,
+        CancellationToken cancellationToken)
+    {
+        Result resultado = await sender.Send(new PayOrderCommand(id), cancellationToken);
+
+        return resultado.ParaNoContent(correlationId.CorrelationId);
     }
 
     /// <summary>
