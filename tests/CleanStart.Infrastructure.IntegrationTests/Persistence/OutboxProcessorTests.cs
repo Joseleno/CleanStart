@@ -232,7 +232,7 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
     public async Task MensagemEmBackoff_NaoELidaAntesDoPrazo()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        (_, Guid mensagemId) = await SemearPedidoAsync(ct);
+        (OrderId pedidoId, Guid mensagemId) = await SemearPedidoAsync(ct);
 
         // Empurra a próxima tentativa para o futuro, como uma falha teria feito.
         await using (AppDbContext preparo = fixture.CriarContexto())
@@ -251,7 +251,10 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
             await processador.ProcessarLoteAsync(ct);
         }
 
-        publisher.Entregues.Should().BeEmpty("o prazo do backoff ainda não venceu");
+        // Só as entregas deste pedido: a base é compartilhada, e outro teste da classe pode ter deixado
+        // mensagem elegível — o que se afirma aqui é que ESTA não saiu.
+        publisher.Entregues.OfType<OrderPlacedEvent>()
+            .Should().NotContain(evento => evento.OrderId == pedidoId, "o prazo do backoff ainda não venceu");
 
         OutboxMessage depois = await LerAsync(mensagemId, ct);
         depois.Attempts.Should().Be(1, "nem sequer foi tentada");
@@ -261,7 +264,7 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
     public async Task TentativasEsgotadas_ParamDeSerLidas()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        (_, Guid mensagemId) = await SemearPedidoAsync(ct);
+        (OrderId pedidoId, Guid mensagemId) = await SemearPedidoAsync(ct);
 
         OutboxOptions opcoes = new() { MaxAttempts = 3 };
 
@@ -283,7 +286,11 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
         }
 
         // É o dead-letter deste projeto: a mensagem deixa de satisfazer o filtro e fica na tabela com o erro.
-        publisher.Entregues.Should().BeEmpty("esgotou as tentativas");
+        // Idem: a mensagem deste pedido é que não pode sair. Outras da base seguem suas próprias políticas —
+        // `MaxAttempts` é política de runtime, e o que aqui é dead-letter sob 3 tentativas volta a ser
+        // elegível para quem processa com 5.
+        publisher.Entregues.OfType<OrderPlacedEvent>()
+            .Should().NotContain(evento => evento.OrderId == pedidoId, "esgotou as tentativas");
 
         OutboxMessage depois = await LerAsync(mensagemId, ct);
         depois.ProcessedOn.Should().BeNull("continua pendente, e é assim que se encontra o que morreu");

@@ -29,7 +29,7 @@ namespace CleanStart.Api.FunctionalTests;
 /// caem com a suíte, e nenhum serviço local precisa estar rodando.
 /// </para>
 /// </remarks>
-public sealed class CleanStartApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("cleanstart_functional")

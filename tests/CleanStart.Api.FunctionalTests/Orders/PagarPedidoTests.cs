@@ -10,7 +10,7 @@ namespace CleanStart.Api.FunctionalTests.Orders;
 /// <summary>
 /// <c>POST /api/v1/orders/{id}/pay</c> exercitado por HTTP.
 /// </summary>
-public sealed class PagarPedidoTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class PagarPedidoTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     /// <summary>
     /// Cria um cliente e um pedido no estado indicado e devolve a identidade do pedido.

@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Joseleno Santos (CodeProcess Solutions)",
+  "classifications": [ "Web", "WebAPI", "Clean Architecture", "DDD", "CQRS" ],
+  "identity": "CleanStart.CleanArchitecture.Solution",
+  "name": "Clean Architecture Solution (.NET 10) — CleanStart",
+  "description": "Solução .NET 10 com Clean Architecture, DDD e CQRS: quatro camadas, testes em cinco níveis e regras de arquitetura validadas automaticamente.",
+  "shortName": "cleanstart",
+  "sourceName": "CleanStart",
+  "defaultName": "CleanArchitectureApp",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "symbols": {
+    "repoUrl": {
+      "type": "generated",
+      "generator": "constant",
+      "parameters": { "value": "https://github.com/Joseleno/CleanStart" },
+      "replaces": "TEMPLATE_REPO_URL"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            "**/[Bb]in/**",
+            "**/[Oo]bj/**",
+            "**/.git/**",
+            "**/.vs/**",
+            "**/TestResults/**",
+            "divulgacao/**",
+            "docs/superpowers/**",
+            "HANDOFF.md",
+            "IMPLEMENTACAO.md",
+            "CLAUDE.md",
+            "PACKAGE.md",
+            "template-pack/**",
+            ".superpowers/**",
+            ".mailmap",
+            "CODE_OF_CONDUCT.md",
+            "CONTRIBUTING.md",
+            "README.md",
+            ".github/**",
+            "**/*.sqlite",
+            "**/*.db",
+            "**/*.db-wal",
+            "**/*.db-shm",
+            "**/*.user",
+            "**/*.wsuo",
+            "global.json"
+          ]
+        }
+      ],
+      "rename": {
+        "global.json.template": "global.json",
+        "CLAUDE.md.template": "CLAUDE.md"
+      }
+    }
+  ]
+}

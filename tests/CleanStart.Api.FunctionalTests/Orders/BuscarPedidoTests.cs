@@ -10,7 +10,7 @@ namespace CleanStart.Api.FunctionalTests.Orders;
 /// <summary>
 /// <c>GET /api/v1/orders/{id}</c> exercitado por HTTP.
 /// </summary>
-public sealed class BuscarPedidoTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class BuscarPedidoTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private async Task<Guid> SemearPedidoAsync(CancellationToken ct)
     {

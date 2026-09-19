@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageId>CleanStart.Templates</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Title>CleanStart — Clean Architecture para .NET 10</Title>
+    <Authors>Joseleno Santos</Authors>
+    <Company>CodeProcess Solutions</Company>
+    <Description>Template de solução .NET 10 com Clean Architecture, DDD e CQRS: quatro camadas, testes em cinco níveis e regras de arquitetura validadas automaticamente.</Description>
+    <PackageTags>dotnet-new;templates;clean-architecture;ddd;cqrs;aspnetcore</PackageTags>
+    <PackageProjectUrl>https://github.com/Joseleno/CleanStart</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Joseleno/CleanStart</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <Copyright>Copyright (c) 2026 Joseleno Santos (CodeProcess Solutions)</Copyright>
+
+    <TargetFramework>net10.0</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+  <!--
+    O que NÃO entra no pacote. A lista é enumerada de propósito: `Content Include="**\*"`
+    varre o disco, e o .gitignore não protege o empacotamento — um arquivo ignorado pelo
+    git ainda é empacotado se não estiver aqui.
+
+    Três grupos: lixo de build e ferramenta; material do autor que não pertence ao kit
+    (memória do projeto, rascunhos de divulgação, o CLAUDE.md deste repositório — o do
+    projeto gerado vem de CLAUDE.md.template); e os metadados do próprio pacote, que
+    entram pelo <None> abaixo e não como conteúdo do template.
+
+    Ao criar um arquivo novo na raiz do repositório, decida se ele pertence ao pacote.
+    O padrão é vazar.
+  -->
+  <PropertyGroup>
+    <!--
+      A raiz do repositório. Este projeto vive numa subpasta de propósito: na raiz, ele
+      competiria com a CleanStart.slnx e quebraria `dotnet build` e `dotnet test` sem
+      argumento, que o README documenta.
+    -->
+    <RepoRoot>$(MSBuildThisFileDirectory)..\</RepoRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TemplatePackExclusion Include="$(RepoRoot)**\bin\**;$(RepoRoot)**\obj\**;$(RepoRoot).git\**;$(RepoRoot).vs\**" />
+    <TemplatePackExclusion Include="$(RepoRoot)**\*.user;$(RepoRoot)**\*.wsuo;$(RepoRoot)**\*.sqlite;$(RepoRoot)**\*.db;$(RepoRoot)**\*.db-wal;$(RepoRoot)**\*.db-shm" />
+    <TemplatePackExclusion Include="$(RepoRoot)TestResults\**;$(RepoRoot).superpowers\**;$(RepoRoot)docs\superpowers\**" />
+    <TemplatePackExclusion Include="$(RepoRoot)divulgacao\**;$(RepoRoot)CLAUDE.md;$(RepoRoot)HANDOFF.md;$(RepoRoot)IMPLEMENTACAO.md" />
+    <TemplatePackExclusion Include="$(RepoRoot)template-pack\**;$(RepoRoot)PACKAGE.md" />
+    <!--
+      Identidade e processo deste repositório, não do kit: o projeto gerado pertence a
+      outra pessoa, que escreve os seus. O .mailmap ainda carrega endereços de e-mail —
+      e este pacote é público.
+    -->
+    <TemplatePackExclusion Include="$(RepoRoot).mailmap;$(RepoRoot)CODE_OF_CONDUCT.md;$(RepoRoot)CONTRIBUTING.md;$(RepoRoot)README.md;$(RepoRoot).github\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      `PackagePath` com o caminho relativo à raiz preserva a estrutura de pastas dentro do
+      pacote. Sem isso o MSBuild achata tudo em content/ e arquivos homônimos de projetos
+      diferentes (os vários GlobalUsings.cs) colidem — o pack falha com NU5118.
+    -->
+    <Content Include="$(RepoRoot)**\*"
+             Exclude="@(TemplatePackExclusion)"
+             PackagePath="content\$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))" />
+    <None Include="$(RepoRoot)PACKAGE.md" Pack="true" PackagePath="\" />
+    <None Include="$(RepoRoot).template.config\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

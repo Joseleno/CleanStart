@@ -1,0 +1,91 @@
+# CLAUDE.md — CleanStart
+
+Contexto permanente deste repositório. Leia antes de qualquer alteração.
+
+## O que é este projeto
+
+Este projeto foi gerado a partir de um [starter kit de arquitetura .NET 10](TEMPLATE_REPO_URL) com Clean Architecture, DDD e CQRS, testes em cinco níveis e regras de arquitetura validadas automaticamente.
+
+Consequência prática para você, Claude: **a clareza do código importa mais do que a esperteza dele.** Prefira sempre a solução explícita e legível à solução curta. Comentários explicam *por quê*, nunca *o quê*.
+
+## Stack fixa (não substituir sem ADR)
+
+| Área | Escolha | Restrição |
+|---|---|---|
+| Runtime | .NET 10 / C# 14 | `net10.0`, nullable habilitado, warnings como erro |
+| Mensageria in-process | **Mediator** (`martinothamar/Mediator`, source generator) | **Não usar MediatR** — licença comercial |
+| Mapeamento | **Mapperly** (`Riok.Mapperly`) | **Não usar AutoMapper** — licença comercial |
+| Endpoints | **Carter** | Sem controllers |
+| ORM | EF Core 10 + Npgsql | PostgreSQL apenas |
+| Cache | `HybridCache` + Redis | — |
+| Validação | FluentValidation | Registrada no pipeline do Mediator |
+| Resiliência | `Microsoft.Extensions.Http.Resilience` (Polly) | — |
+| Logs | Serilog | JSON em produção |
+| Telemetria | OpenTelemetry | Exportador OTLP |
+| Testes | xUnit v3, **AwesomeAssertions**, NSubstitute, Testcontainers, Bogus | **Não usar Moq** (SponsorLink) nem **FluentAssertions** (licença comercial a partir da v8) |
+| Arquitetura | NetArchTest | Regras como teste |
+
+Antes de adicionar qualquer pacote novo: verifique a licença e a última versão publicada no NuGet. Não invente versão — se não tiver certeza, use a busca ou deixe o `PackageVersion` para o responsável pelo projeto confirmar. **Licença é critério de bloqueio, não detalhe:** esta stack evita dependência de licença comercial, então adicionar uma quebra essa escolha.
+
+## Nome e namespaces
+
+- Solução: `CleanStart.slnx` (formato XML, `dotnet new sln --format slnx`), **na raiz do repositório** — nunca em subpasta
+- Projetos: `CleanStart.Domain`, `CleanStart.Application`, `CleanStart.Infrastructure`, `CleanStart.Api`
+- Testes: `CleanStart.<Camada>.UnitTests`, `CleanStart.Infrastructure.IntegrationTests`, `CleanStart.Api.FunctionalTests`, `CleanStart.ArchitectureTests`
+
+## Regras de dependência (invioláveis)
+
+```
+Api            → Application
+Application    → Domain
+Domain         → nada
+Infrastructure → Domain, Application (só interfaces)
+```
+
+Proibições por camada:
+
+- **Domain**: nenhum `using` de framework fora de `System.*`. Nada de EF Core, nada de outra camada do projeto.
+- **Application**: nada de `Microsoft.EntityFrameworkCore`, nada de `DbContext`, nada de `CleanStart.Infrastructure` ou `CleanStart.Api`. Persistência só por `IRepository`/`IUnitOfWork`.
+- **Infrastructure**: nada de `CleanStart.Api`. Nenhuma regra de negócio dentro de repositório.
+- **Api**: nenhuma regra de negócio em endpoint, nenhum `DbContext` ou repositório direto. Endpoint envia mensagem pelo `ISender` e traduz o `Result` em HTTP.
+
+Essas regras estão em `tests/CleanStart.ArchitectureTests`. Se você precisar quebrar uma, **pare e pergunte ao responsável pelo projeto** — a resposta certa quase nunca é relaxar o teste.
+
+## Convenções de código
+
+- Erro de negócio retorna `Result` / `Result<T>`. Exception só para falha de infraestrutura ou bug.
+- `Result`, `Result<T>` e `Error` vivem no **Domain** (`Domain/Common` e `Domain/Errors`) — porque é o domínio quem os produz. A Application consome; se precisar de algo em cima, usa método de extensão. Nunca existem dois `Result` na solução.
+- Handler não referencia tipo do namespace `Mediator` diretamente. Usa os marcadores próprios (`ICommand<T>`, `IQueryHandler<,>`) de `Application/Common`.
+- Entidade não tem setter público. Estado muda por método de domínio.
+- Toda entidade tem identidade tipada (`OrderId`, `CustomerId`), nunca `Guid` cru na assinatura.
+- Valor monetário é `Money`, nunca `decimal` solto.
+- Handlers são `sealed`. Commands e queries são `record`.
+- Um caso de uso = uma pasta em `Application/<Agregado>/<CasoDeUso>/` contendo command/query, handler, validator e response (vertical slice).
+- Construtor primário quando reduzir ruído; injeção por construtor sempre.
+- `IDateTimeProvider` em vez de `DateTime.UtcNow` direto em handler ou domínio — testes precisam de tempo determinístico.
+- Nada de `async void`. `CancellationToken` propagado em toda chamada assíncrona.
+- Comentário em português, código (identificadores) em inglês.
+- Se uma decisão técnica nova aparecer no meio do caminho, considere registrar um ADR antes de implementar.
+
+## Testes
+
+Nenhuma mudança é considerada pronta sem teste no nível apropriado:
+
+| O que mudou | Teste obrigatório |
+|---|---|
+| Regra de domínio | `Domain.UnitTests` |
+| Handler | `Application.UnitTests` (repositórios com NSubstitute) |
+| Repositório, interceptor, migration | `Infrastructure.IntegrationTests` (Testcontainers) |
+| Endpoint | `Api.FunctionalTests` (caminho feliz + pelo menos um erro) |
+| Estrutura/convenção | `ArchitectureTests` |
+
+`dotnet test` precisa passar antes de qualquer commit. Sem exceção, sem `[Skip]`.
+
+## O que nunca fazer aqui
+
+- Adicionar MediatR, AutoMapper, Moq ou FluentAssertions (todos com trava de licença ou histórico de incidente).
+- Usar o provider `InMemory` do EF Core em teste de integração.
+- Colocar regra de negócio em handler quando ela pertence à entidade.
+- Silenciar ou remover um teste de arquitetura para fazer o build passar.
+- Commitar segredo, connection string com senha real ou `appsettings.Production.json`.
+- Inventar API de biblioteca. Se não tiver certeza da assinatura, consulte a documentação antes.

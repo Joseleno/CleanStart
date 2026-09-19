@@ -10,7 +10,7 @@ namespace CleanStart.Api.FunctionalTests.Orders;
 /// <summary>
 /// <c>POST /api/v1/orders/{id}/cancel</c> exercitado por HTTP.
 /// </summary>
-public sealed class CancelarPedidoTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class CancelarPedidoTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     /// <summary>
     /// Cria um pedido no estado indicado e devolve a identidade dele.

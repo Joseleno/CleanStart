@@ -810,7 +810,7 @@ máquina e só as dependências em container.
 Testes:
 
 ```bash
-dotnet test                                                     # tudo (303 testes, 5 níveis)
+dotnet test                                                     # tudo (322 testes, 5 níveis)
 dotnet test tests/CleanStart.ArchitectureTests/CleanStart.ArchitectureTests.csproj   # só as regras
 ```
 
@@ -822,18 +822,34 @@ dotnet test tests/CleanStart.ArchitectureTests/CleanStart.ArchitectureTests.cspr
 
 ## Como usar como base do seu projeto
 
-1. Clone e renomeie a solução e os namespaces (`CleanStart` → o seu nome).
-2. Apague a feature `Orders` — ela é referência, não fundação.
-3. Mantenha `Domain/Common`, `Application/Common`, os interceptors e os `ArchitectureTests`. É isso que sustenta o resto.
-4. Siga `docs/adding-a-feature.md` para a primeira feature do seu domínio.
-5. Revise os ADRs: onde a decisão não servir para o seu contexto, escreva um ADR novo substituindo o antigo em vez de apagar o original. O histórico da decisão vale mais do que a decisão.
+Instale o template e gere o projeto já com o seu nome — sem rename manual:
+
+```bash
+dotnet new install CleanStart.Templates
+dotnet new cleanstart -n MinhaEmpresa.MeuProjeto
+```
+
+Depois de instalado, ele também aparece no diálogo *File → New → Project* do Visual Studio.
+
+Para instalar a partir de um clone deste repositório, em vez do NuGet: `dotnet new install .` na raiz.
+
+O projeto gerado nasce com o build verde e os 322 testes passando nos cinco níveis, incluindo os de
+integração e funcionais — que sobem os próprios containers. Nomes compostos (`MinhaEmpresa.MeuProjeto`)
+funcionam; o nome do banco de dados herda o ponto, o que o PostgreSQL aceita.
+
+Em seguida:
+
+1. Apague a feature `Orders` — ela é referência, não fundação.
+2. Mantenha `Domain/Common`, `Application/Common`, os interceptors e os `ArchitectureTests`. É isso que sustenta o resto.
+3. Siga `docs/adding-a-feature.md` para a primeira feature do seu domínio.
+4. Revise os ADRs: onde a decisão não servir para o seu contexto, escreva um ADR novo substituindo o antigo em vez de apagar o original. O histórico da decisão vale mais do que a decisão.
 
 ---
 
 ## Roadmap
 
 - [ ] Multi-tenancy opcional (discriminador + Row-Level Security no Postgres)
-- [ ] Template `dotnet new` para eliminar o rename manual
+- [x] Template `dotnet new` para eliminar o rename manual
 - [ ] Variante com MongoDB na Infrastructure, mostrando que a troca não toca Domain nem Application
 - [ ] Exemplo de integração com mensageria externa (MassTransit + RabbitMQ) — o ponto de extensão já existe e
       está nomeado: `IOutboxPublisher`, hoje com uma implementação que só registra no log

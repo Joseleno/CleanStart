@@ -24,7 +24,7 @@ namespace CleanStart.Api.FunctionalTests;
 /// ser validado, o segundo é rejeitado pela assinatura.
 /// </para>
 /// </remarks>
-public sealed class SegurancaTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class SegurancaTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private const string RotaDePedidos = "/api/v1/orders";
 

@@ -10,7 +10,7 @@ namespace CleanStart.Api.FunctionalTests.Orders;
 /// <summary>
 /// <c>GET /api/v1/orders</c> exercitado por HTTP.
 /// </summary>
-public sealed class ListarPedidosTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class ListarPedidosTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private const string Rota = "/api/v1/orders";
 

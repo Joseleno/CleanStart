@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json.schemastore.org/vs-2017.3.host",
+  "icon": "icon.png",
+  "order": 0,
+  "description": "Solução .NET 10 com Clean Architecture, DDD e CQRS.",
+  "learnMoreLink": "https://github.com/Joseleno/CleanStart"
+}

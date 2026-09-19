@@ -17,7 +17,7 @@ namespace CleanStart.Api.FunctionalTests.Orders;
 /// Cobre o que os testes das camadas de baixo não alcançam: serialização, binding, o pipeline de middlewares e a
 /// tradução de <c>Result</c> em status HTTP.
 /// </remarks>
-public sealed class CriarPedidoTests(CleanStartApiFactory factory) : IClassFixture<CleanStartApiFactory>
+public sealed class CriarPedidoTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private const string Rota = "/api/v1/orders";
 
