@@ -6,7 +6,7 @@
   -->
   <!--
     A Infrastructure é referenciada explicitamente, e não só através da Api: estes testes semeiam dados pelo
-    AppDbContext (ver CleanStartApiFactory.ComEscopoAsync), então o tipo é usado no código daqui.
+    AppDbContext (ver ApiFactory.ComEscopoAsync), então o tipo é usado no código daqui.
 
     Depender da referência transitiva pela Api compila enquanto a Api mantiver a mesma cadeia de pacotes — e
     quebra no dia em que ela mudar, com um CS0234 que parece não ter relação com a alteração feita.

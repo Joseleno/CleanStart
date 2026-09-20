@@ -32,7 +32,7 @@ internal static class InterceptorRegistration
     /// genérica devolveria <c>DbContextOptionsBuilder</c>, e <c>.Options</c> deixaria de produzir
     /// <c>DbContextOptions&lt;AppDbContext&gt;</c> — obrigando quem chama a um cast.
     /// </remarks>
-    public static DbContextOptionsBuilder<TContext> AddDomainInterceptors<TContext>(
+    public static DbContextOptionsBuilder<TContext> AddPersistenceInterceptors<TContext>(
         this DbContextOptionsBuilder<TContext> builder,
         SoftDeleteInterceptor softDelete,
         AuditableInterceptor auditable,
@@ -49,7 +49,7 @@ internal static class InterceptorRegistration
     /// <summary>
     /// Sobrecarga para o <c>AddDbContext</c>, cujo delegate recebe o builder não genérico.
     /// </summary>
-    public static DbContextOptionsBuilder AddDomainInterceptors(
+    public static DbContextOptionsBuilder AddPersistenceInterceptors(
         this DbContextOptionsBuilder builder,
         SoftDeleteInterceptor softDelete,
         AuditableInterceptor auditable,

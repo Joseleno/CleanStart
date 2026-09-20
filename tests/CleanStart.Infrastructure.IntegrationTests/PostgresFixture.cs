@@ -87,7 +87,7 @@ public sealed class PostgresFixture : IAsyncLifetime
                 npgsql.CommandTimeout(padroes.CommandTimeoutSeconds);
                 npgsql.EnableRetryOnFailure(padroes.MaxRetryCount);
             })
-            .AddDomainInterceptors(
+            .AddPersistenceInterceptors(
                 new SoftDeleteInterceptor(clock),
                 new AuditableInterceptor(clock, currentUser),
                 new DomainEventInterceptor())

@@ -119,7 +119,7 @@ public static class DependencyInjection
 
             // A ordem dos três é fixada em um lugar só, com o motivo escrito lá — ela importa: o soft delete
             // precisa converter Deleted em Modified antes de a auditoria rodar.
-            options.AddDomainInterceptors(
+            options.AddPersistenceInterceptors(
                 provider.GetRequiredService<SoftDeleteInterceptor>(),
                 provider.GetRequiredService<AuditableInterceptor>(),
                 provider.GetRequiredService<DomainEventInterceptor>());

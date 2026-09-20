@@ -67,10 +67,35 @@
       `PackagePath` com o caminho relativo à raiz preserva a estrutura de pastas dentro do
       pacote. Sem isso o MSBuild achata tudo em content/ e arquivos homônimos de projetos
       diferentes (os vários GlobalUsings.cs) colidem — o pack falha com NU5118.
+
+      São dois grupos porque o NuGet decide se o último segmento do `PackagePath` é arquivo ou
+      pasta pela presença de um PONTO no nome. Sem ponto ele cria uma pasta e anexa o caminho
+      de origem dentro dela: `Dockerfile` virava `content/Dockerfile/Dockerfile` e `LICENSE`
+      virava `content/LICENSE/LICENSE`. No projeto gerado isso quebra o `docker compose`, porque
+      `dockerfile: Dockerfile` passa a apontar para uma pasta — e passa despercebido, porque o
+      `dotnet build` do projeto gerado continua verde.
+
+      Quem tem extensão vai pelo caminho completo. Quem não tem vai pela PASTA de destino, e o
+      NuGet acrescenta o nome do arquivo — que é o comportamento que corrompia o outro grupo, e
+      aqui é exatamente o que se quer. A regra é por extensão, não pela lista dos dois arquivos
+      de hoje: um `Makefile` ou um `CODEOWNERS` acrescentado depois entra no grupo certo sozinho.
     -->
+    <!--
+      Os arquivos sem extensão são nomeados um a um, e não separados por glob: no MSBuild o
+      `*.*` casa também quem NÃO tem ponto no nome (o ponto é opcional), então `**\*.*` pegaria
+      o `Dockerfile` junto e a divisão não aconteceria. Também não dá para dividir por
+      `Condition`, porque metadado em condição de item é recusado (MSB4190/MSB4191).
+
+      Ao acrescentar um arquivo sem extensão na raiz — um `Makefile`, um `CODEOWNERS` —, ele
+      precisa entrar nesta lista, ou chega ao projeto gerado como pasta.
+    -->
+    <TemplatePackNoExtension Include="$(RepoRoot)Dockerfile;$(RepoRoot)LICENSE" />
+
     <Content Include="$(RepoRoot)**\*"
-             Exclude="@(TemplatePackExclusion)"
+             Exclude="@(TemplatePackExclusion);@(TemplatePackNoExtension)"
              PackagePath="content\$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))" />
+    <Content Include="@(TemplatePackNoExtension)"
+             PackagePath="content\$([MSBuild]::MakeRelative($(RepoRoot), %(RootDir)%(Directory)))" />
     <None Include="$(RepoRoot)PACKAGE.md" Pack="true" PackagePath="\" />
     <None Include="$(RepoRoot).template.config\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>

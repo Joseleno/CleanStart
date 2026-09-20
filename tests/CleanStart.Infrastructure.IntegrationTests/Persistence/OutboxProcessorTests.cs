@@ -251,8 +251,9 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
             await processador.ProcessarLoteAsync(ct);
         }
 
-        // Só as entregas deste pedido: a base é compartilhada, e outro teste da classe pode ter deixado
-        // mensagem elegível — o que se afirma aqui é que ESTA não saiu.
+        // Só as entregas deste pedido: `ProcessarLoteAsync` traz até `BatchSize` mensagens elegíveis, e a base
+        // é compartilhada — outro teste da classe pode ter deixado uma que sai legitimamente neste mesmo
+        // ciclo. O que se afirma aqui é que ESTA não saiu.
         publisher.Entregues.OfType<OrderPlacedEvent>()
             .Should().NotContain(evento => evento.OrderId == pedidoId, "o prazo do backoff ainda não venceu");
 
@@ -286,9 +287,10 @@ public sealed class OutboxProcessorTests(PostgresFixture fixture) : IClassFixtur
         }
 
         // É o dead-letter deste projeto: a mensagem deixa de satisfazer o filtro e fica na tabela com o erro.
-        // Idem: a mensagem deste pedido é que não pode sair. Outras da base seguem suas próprias políticas —
-        // `MaxAttempts` é política de runtime, e o que aqui é dead-letter sob 3 tentativas volta a ser
-        // elegível para quem processa com 5.
+        // Idem: a asserção é sobre ESTA mensagem, não sobre o lote. O que faz outras saírem no mesmo ciclo
+        // não é divergência de política — aqui só existe um processador, com `MaxAttempts = 3` valendo para
+        // todas — é o escopo do lote: as pendentes que outros testes deixaram na base entram por terem
+        // `Attempts` abaixo do limite, e são publicadas normalmente.
         publisher.Entregues.OfType<OrderPlacedEvent>()
             .Should().NotContain(evento => evento.OrderId == pedidoId, "esgotou as tentativas");
 

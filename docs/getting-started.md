@@ -7,7 +7,7 @@ de começar) ou **a API na máquina** (melhor para depurar).
 
 | | Para quê |
 |---|---|
-| **.NET SDK 10.0.401** ou mais novo | A versão está fixada no `global.json` |
+| **.NET SDK 10.0** ou mais novo | A versão mínima está fixada no `global.json`, com `rollForward` |
 | **Docker** | PostgreSQL e Redis — e **também para rodar os testes** |
 
 O Docker não é opcional: cerca de 37% da suíte sobe containers de verdade

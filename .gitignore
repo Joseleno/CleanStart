@@ -169,3 +169,7 @@ IMPLEMENTACAO.md
 # Rascunhos de divulgação — posts e artigos antes de publicar. Mesma lógica:
 # são material do autor, não do kit.
 divulgacao/
+
+# Área de trabalho dos agentes: ledger, briefs e relatórios de execução.
+# É rascunho de processo, não do kit — o registro que importa é o histórico do git.
+.superpowers/

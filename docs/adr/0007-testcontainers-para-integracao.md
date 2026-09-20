@@ -31,13 +31,13 @@ Duas fixtures, com escopos diferentes:
 | Fixture | Sobe | Para quê |
 |---|---|---|
 | `PostgresFixture` | Postgres | Repositórios, interceptors, migrations, o despachante do outbox |
-| `CleanStartApiFactory` | **API inteira** + Postgres + Redis | A pilha completa, entrando por HTTP |
+| `ApiFactory` | **API inteira** + Postgres + Redis | A pilha completa, entrando por HTTP |
 
 Um container por classe de teste, derrubado ao final. Nenhum serviço local precisa estar instalado — os testes
 rodam num clone novo sem subir nada antes, o que também significa que **não dependem do `docker-compose`** do
 repositório.
 
-A `CleanStartApiFactory` executa o **`Program.cs` real**: mesmos middlewares, mesmo pipeline, mesma injeção de
+A `ApiFactory` executa o **`Program.cs` real**: mesmos middlewares, mesmo pipeline, mesma injeção de
 dependência. O que se substitui é apenas a configuração. Trocar registro de serviço ali faria o teste exercitar
 uma composição que não existe em produção.
 

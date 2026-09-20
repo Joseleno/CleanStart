@@ -5,7 +5,7 @@
 [![CI](https://github.com/Joseleno/CleanStart/actions/workflows/ci.yml/badge.svg)](https://github.com/Joseleno/CleanStart/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Licença MIT](https://img.shields.io/badge/licença-MIT-blue)](LICENSE)
-[![Testes](https://img.shields.io/badge/testes-303-brightgreen)](#estratégia-de-testes)
+[![Testes](https://img.shields.io/badge/testes-322-brightgreen)](#estratégia-de-testes)
 
 CleanStart não é um template vazio com quatro pastas e um `Program.cs`. É uma solução completa, executável, com uma feature de referência implementada de ponta a ponta, testes em cinco níveis, regras de arquitetura validadas automaticamente e as decisões técnicas documentadas em ADRs.
 
@@ -280,9 +280,11 @@ public void Handlers_SaoSealed()
 }
 ```
 
-São **dez regras** no total: cinco de dependência entre camadas, duas sobre como o domínio é escrito (setter
-público, coleção mutável) e três de mensageria (handler `sealed`, mensagem `record`, e nada referenciando o
-Mediator fora dos marcadores).
+São **dezesseis regras** no total: cinco de dependência entre camadas, duas sobre como o domínio é escrito
+(setter público, coleção mutável), três de mensageria (handler `sealed`, mensagem `record`, e nada
+referenciando o Mediator fora dos marcadores) e seis sobre a Api e o que atravessa as camadas — a Api não
+referencia EF Core nem repositório, nada fora dos módulos toca o Mediator direto, nenhum método é `async
+void`, nenhum repositório devolve `IQueryable` e toda raiz de agregado tem identidade tipada.
 
 ---
 
@@ -556,6 +558,7 @@ O repositório vem com um domínio de pedidos implementado inteiro, não com um 
 - **Criar pedido** — validação de entrada, carregamento de agregado relacionado, invariantes no domínio, evento publicado via outbox.
 - **Consultar pedido** — query com projeção direta para DTO e cache com invalidação por chave.
 - **Listar pedidos** — paginação por keyset (não offset), filtro e ordenação.
+- **Pagar pedido** — carrega dois agregados para decidir, escreve em um só, e delega a transição inteira ao domínio.
 - **Cancelar pedido** — regra de transição de estado que depende do estado atual, com erro tipado quando não permitido.
 
 Cada uma cobre um padrão diferente. Juntas, dão o vocabulário para implementar qualquer coisa parecida.
@@ -565,11 +568,13 @@ Cada uma cobre um padrão diferente. Juntas, dão o vocabulário para implementa
 | `POST /api/v1/orders` | Validação no pipeline, invariantes no agregado, evento no outbox |
 | `GET /api/v1/orders` | Paginação por cursor, filtro por status e período |
 | `GET /api/v1/orders/{id}` | Projeção direta para DTO, cache no reader |
+| `POST /api/v1/orders/{id}/pay` | Dois agregados lidos, um escrito; transição no domínio |
 | `POST /api/v1/orders/{id}/cancel` | Transição de estado, invalidação de cache, 204 sem corpo |
 | `POST /api/v1/dev/token` | Emissor de exemplo — **só em `Development`** |
 | `GET /health/live` · `GET /health/ready` | Abertos, por design — o orquestrador não se autentica |
 
-Os quatro primeiros **exigem token**. `POST /{id}/cancel` e não `DELETE /{id}` porque cancelar não remove nada:
+Todas as rotas de `/api/v1/orders` **exigem token** — a autorização está no `MapGroup`, não rota a rota.
+`POST /{id}/cancel` e não `DELETE /{id}` porque cancelar não remove nada:
 muda a situação de um registro que continua existindo, e pedido é histórico.
 
 ---
@@ -861,8 +866,8 @@ Em seguida:
 ## Contribuindo
 
 Issues e PRs são bem-vindos. O [CONTRIBUTING.md](CONTRIBUTING.md) tem o passo a passo — e, principalmente, **as
-regras que o build impõe**: warnings como erro, `var` só com o tipo aparente, e dez regras de arquitetura que
-reprovam com o nome do tipo infrator.
+regras que o build impõe**: warnings como erro, `var` só com o tipo aparente, e dezesseis regras de
+arquitetura que reprovam com o nome do tipo infrator.
 
 O resumo:
 
